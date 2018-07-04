@@ -194,6 +194,7 @@
           <div class="panel-body">
               <ul class="list-unstyled">
                   <li><a href="admin/classification/index.jsp">Manage Flow Classification</a></li>
+                  <li><a href="admin/daemons/index.jsp">Manage Daemons</a></li>
               </ul>
           </div> <!-- panel-body -->
       </div> <!-- panel -->

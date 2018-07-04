@@ -1,0 +1,39 @@
+<style>
+    toggle.disabled {
+        cursor: not-allowed;
+        pointer-events: none;
+        box-shadow: none;
+        opacity: 0.65;
+    }
+</style>
+<div class="generic-container" ng-controller="ListController as ctrl">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <span class="lead">List of Daemons </span>
+            <button type="button" ng-click="refreshDaemonList()" class="btn btn-primary"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
+        </div>
+        <div class="panel-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>is Enabled</th>
+                    <th>Reload</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="d in daemons">
+                    <td><span ng-bind="d.id"></span></td>
+                    <td><span ng-bind="d.name"></span></td>
+                    <td><span ng-bind="d.status"></span></td>
+                    <td><toggle class="disabled" ng-model="d.enabled"></toggle></td>
+                    <td><button type="button" ng-click="reloadPressed(d.name)" class="btn"><span class="glyphicon glyphicon-repeat"></span> Reload</button></td>
+                </tr>
+                </tbody>
+            </table>
+            <a href="/" role="button" class="btn btn-info" role="button">Back</a>
+        </div>
+    </div>
+</div>
