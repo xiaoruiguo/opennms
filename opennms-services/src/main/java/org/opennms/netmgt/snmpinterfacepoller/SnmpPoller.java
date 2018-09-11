@@ -29,6 +29,10 @@
 package org.opennms.netmgt.snmpinterfacepoller;
 
 
+import java.util.List;
+
+import javax.naming.event.EventContext;
+
 import org.apache.commons.lang.StringUtils;
 import org.opennms.core.network.IPAddress;
 import org.opennms.core.network.IPAddressRange;
@@ -368,21 +372,38 @@ public class SnmpPoller extends AbstractServiceDaemon {
             }
         }
     }
-    
+
     /**
      * <p>reloadConfig</p>
      *
      * @param event a {@link org.opennms.netmgt.xml.event.Event} object.
      */
-    @EventHandler(uei = EventConstants.SNMPPOLLERCONFIG_CHANGED_EVENT_UEI)
+    @EventHandler(ueis = {EventConstants.SNMPPOLLERCONFIG_CHANGED_EVENT_UEI, EventConstants.RELOAD_DAEMON_CONFIG_UEI})
     public void reloadConfig(Event event) {
-        LOG.debug("reloadConfig: managing event: {}", event.getUei());
-        try {
-            getPollerConfig().update();
-            getNetwork().deleteAll();
-            scheduleExistingSnmpInterface();
-        } catch (Throwable e) {
-            LOG.error("Update SnmpPoller configuration file failed",e);
+        boolean doReloadConfig = false;
+
+        if(EventConstants.SNMPPOLLERCONFIG_CHANGED_EVENT_UEI.equals(event.getUei())){
+            doReloadConfig = true;
+        }else if(EventConstants.RELOAD_DAEMON_CONFIG_UEI.equals(event.getUei())){
+            List<Parm> parmCollection = event.getParmCollection();
+            for (Parm parm : parmCollection) {
+                if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) &&
+                        "SnmpPoller".equalsIgnoreCase(parm.getValue().getContent())) {
+                    doReloadConfig = true;
+                    break;
+                }
+            }
+        }
+
+        if(doReloadConfig){
+            LOG.debug("reloadConfig: managing event: {}", event.getUei());
+            try {
+                getPollerConfig().update();
+                getNetwork().deleteAll();
+                scheduleExistingSnmpInterface();
+            } catch (Throwable e) {
+                LOG.error("Update SnmpPoller configuration file failed", e);
+            }
         }
     }
 
