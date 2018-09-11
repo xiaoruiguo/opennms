@@ -951,7 +951,7 @@
           </systemPropertyVariables>
           <forkCount>1</forkCount>
           <reuseForks>false</reuseForks>
-          <rerunFailingTestsCount>1</rerunFailingTestsCount>
+          <rerunFailingTestsCount>0</rerunFailingTestsCount>
           <includes>
             <include>**/*Test.java</include>
           </includes>
@@ -980,7 +980,7 @@
           <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
           <forkCount>1</forkCount>
           <reuseForks>false</reuseForks>
-          <rerunFailingTestsCount>1</rerunFailingTestsCount>
+          <rerunFailingTestsCount>0</rerunFailingTestsCount>
           <skipITs>${skipITs}</skipITs>
         </configuration>
         <executions>
@@ -1251,7 +1251,7 @@
    <webstart.dnameSt/>
    <webstart.dnameC/>
 
-   <updatePolicy>interval:60</updatePolicy> <!-- 60 minutes -->
+   <updatePolicy>never</updatePolicy> <!-- 60 minutes -->
    <maven.clover.licenseLocation>${user.home}/.m2/clover.license</maven.clover.licenseLocation>
 
     <!-- dependency versions -->

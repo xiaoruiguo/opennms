@@ -26,11 +26,48 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.web.rest.v1.support;
+package org.opennms.netmgt.daemon;
 
-public enum DaemonReloadState {
-    Unknown,
-    Reloading,
-    Success,
-    Failed
+/*
+public class EmptyEventForwarder implements EventForwarder {
+
+    private final List<Event> eventList = new ArrayList<>();
+    private final List<Log> logList = new ArrayList<>();
+
+    @Autowired
+    private EventDao eventDao;
+
+    @Override
+    public void sendNow(Event event) {
+        OnmsEvent onmsEvent = new OnmsEvent();
+        onmsEvent.setEventUei(event.getUei());
+        onmsEvent.setEventTime(event.getTime());
+        onmsEvent.setEventParametersFromEvent(event);
+        eventDao.save(onmsEvent);
+        eventList.add(event);
+    }
+
+    @Override
+    public void sendNow(Log eventLog) {
+        logList.add(eventLog);
+    }
+
+    @Override
+    public void sendNowSync(Event event) {
+        this.sendNow(event);
+    }
+
+    @Override
+    public void sendNowSync(Log eventLog) {
+        this.sendNow(eventLog);
+    }
+
+    public List<Event> getEventList() {
+        return eventList;
+    }
+
+    public List<Log> getLogList() {
+        return logList;
+    }
 }
+*/
