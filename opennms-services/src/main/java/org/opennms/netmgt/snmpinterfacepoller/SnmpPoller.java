@@ -29,9 +29,10 @@
 package org.opennms.netmgt.snmpinterfacepoller;
 
 
+import java.io.IOException;
+import java.util.Calendar;
 import java.util.List;
-
-import javax.naming.event.EventContext;
+import java.util.function.Consumer;
 
 import org.apache.commons.lang.StringUtils;
 import org.opennms.core.network.IPAddress;
@@ -39,10 +40,13 @@ import org.opennms.core.network.IPAddressRange;
 import org.opennms.netmgt.config.SnmpEventInfo;
 import org.opennms.netmgt.config.SnmpInterfacePollerConfig;
 import org.opennms.netmgt.daemon.AbstractServiceDaemon;
+import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.events.api.EventConstants;
+import org.opennms.netmgt.events.api.EventForwarder;
 import org.opennms.netmgt.events.api.annotations.EventHandler;
 import org.opennms.netmgt.events.api.annotations.EventListener;
 import org.opennms.netmgt.model.OnmsIpInterface;
+import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.scheduler.LegacyScheduler;
 import org.opennms.netmgt.scheduler.Scheduler;
 import org.opennms.netmgt.snmpinterfacepoller.pollable.PollableInterface;
@@ -373,38 +377,30 @@ public class SnmpPoller extends AbstractServiceDaemon {
         }
     }
 
-    /**
-     * <p>reloadConfig</p>
-     *
-     * @param event a {@link org.opennms.netmgt.xml.event.Event} object.
-     */
     @EventHandler(ueis = {EventConstants.SNMPPOLLERCONFIG_CHANGED_EVENT_UEI, EventConstants.RELOAD_DAEMON_CONFIG_UEI})
     public void reloadConfig(Event event) {
-        boolean doReloadConfig = false;
-
-        if(EventConstants.SNMPPOLLERCONFIG_CHANGED_EVENT_UEI.equals(event.getUei())){
-            doReloadConfig = true;
-        }else if(EventConstants.RELOAD_DAEMON_CONFIG_UEI.equals(event.getUei())){
-            List<Parm> parmCollection = event.getParmCollection();
-            for (Parm parm : parmCollection) {
-                if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) &&
-                        "SnmpPoller".equalsIgnoreCase(parm.getValue().getContent())) {
-                    doReloadConfig = true;
-                    break;
-                }
-            }
-        }
-
-        if(doReloadConfig){
-            LOG.debug("reloadConfig: managing event: {}", event.getUei());
+        if(EventConstants.SNMPPOLLERCONFIG_CHANGED_EVENT_UEI.equals(event.getUei())) {
             try {
-                getPollerConfig().update();
-                getNetwork().deleteAll();
-                scheduleExistingSnmpInterface();
+                doConfigReload(event);
             } catch (Throwable e) {
                 LOG.error("Update SnmpPoller configuration file failed", e);
             }
+        } else {
+            DaemonTools.handleReloadEvent(event, "SnmpPoller", e -> {
+                try {
+                    doConfigReload(e);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
         }
+    }
+
+    private void doConfigReload(final Event event) throws IOException {
+        LOG.debug("reloadConfig: managing event: {}", event.getUei());
+        getPollerConfig().update();
+        getNetwork().deleteAll();
+        scheduleExistingSnmpInterface();
     }
 
     /**
