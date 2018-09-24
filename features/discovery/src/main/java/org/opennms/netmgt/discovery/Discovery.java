@@ -36,6 +36,7 @@ import java.util.TimerTask;
 
 import org.opennms.netmgt.config.DiscoveryConfigFactory;
 import org.opennms.netmgt.daemon.AbstractServiceDaemon;
+import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.events.api.EventForwarder;
 import org.opennms.netmgt.events.api.annotations.EventHandler;
@@ -195,9 +196,11 @@ public class Discovery extends AbstractServiceDaemon {
     @EventHandler(uei=EventConstants.RELOAD_DAEMON_CONFIG_UEI)
     public void reloadDaemonConfig(Event e) {
         LOG.info("reloadDaemonConfig: processing reload daemon event...");
-        if (isReloadConfigEventTarget(e)) {
-            reloadAndReStart();
-        }
+        DaemonTools.handleReloadEvent(e, DAEMON_NAME, (event)->{
+            m_discoveryFactory.reload();
+            this.stop();
+            this.start();
+        });
         LOG.info("reloadDaemonConfig: reload daemon event processed.");
     }
     

@@ -38,6 +38,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.opennms.netmgt.config.tl1d.Tl1Element;
 import org.opennms.netmgt.daemon.AbstractServiceDaemon;
+import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.dao.api.Tl1ConfigurationDao;
 import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.events.api.EventForwarder;
@@ -87,19 +88,16 @@ public class Tl1d extends AbstractServiceDaemon {
      */
     @EventHandler(uei=EventConstants.RELOAD_DAEMON_CONFIG_UEI)
     public void handleRelooadConfigurationEvent(Event e) {
-        
-
-        if (isReloadConfigEventTarget(e)) {
-            EventBuilder ebldr = null;
-            try {
+        if(isReloadConfigEventTarget(e)){
+            DaemonTools.handleReloadEvent(e, "Tl1d", (d) -> {
                 stopListeners();
                 removeClients();
                 /*
                  * leave everything currently on the queue, no need to mess with that, might want a handler
                  * someday for emptying the current queue on a reload event or even a pause clients or something.
-                 * 
+                 *
                  * Don't interrupt message processor, it simply waits on the queue from something to be added.
-                 * 
+                 *
                  */
 
                 m_configurationDao.update();
@@ -110,27 +108,13 @@ public class Tl1d extends AbstractServiceDaemon {
 
                 LOG.debug("handleReloadConfigurationEvent: {} defined.", m_tl1Clients.size());
                 LOG.info("handleReloadConfigurationEvent: completed.");
-                
-                ebldr = new EventBuilder(EventConstants.RELOAD_DAEMON_CONFIG_SUCCESSFUL_UEI, getName());
-                ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Tl1d");
-
-            } catch (Throwable exception) {
-                LOG.error("handleReloadConfigurationEvent: failed.", exception);
-                ebldr = new EventBuilder(EventConstants.RELOAD_DAEMON_CONFIG_FAILED_UEI, getName());
-                ebldr.addParam(EventConstants.PARM_DAEMON_NAME, "Tl1d");
-                ebldr.addParam(EventConstants.PARM_REASON, exception.getLocalizedMessage().substring(1, 128));
-            }
-            
-            if (ebldr != null) {
-                m_eventForwarder.sendNow(ebldr.getEvent());
-            }
-
+            });
         }
     }
-    
+
     private boolean isReloadConfigEventTarget(Event event) {
         boolean isTarget = false;
-        
+
         List<Parm> parmCollection = event.getParmCollection();
 
         for (Parm parm : parmCollection) {
@@ -139,7 +123,7 @@ public class Tl1d extends AbstractServiceDaemon {
                 break;
             }
         }
-        
+
         LOG.debug("isReloadConfigEventTarget: Tl1d was target of reload event: {}", isTarget);
         return isTarget;
     }

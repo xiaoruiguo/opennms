@@ -30,9 +30,6 @@ package org.opennms.netmgt.snmpinterfacepoller;
 
 
 import java.io.IOException;
-import java.util.Calendar;
-import java.util.List;
-import java.util.function.Consumer;
 
 import org.apache.commons.lang.StringUtils;
 import org.opennms.core.network.IPAddress;
@@ -42,11 +39,9 @@ import org.opennms.netmgt.config.SnmpInterfacePollerConfig;
 import org.opennms.netmgt.daemon.AbstractServiceDaemon;
 import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.events.api.EventConstants;
-import org.opennms.netmgt.events.api.EventForwarder;
 import org.opennms.netmgt.events.api.annotations.EventHandler;
 import org.opennms.netmgt.events.api.annotations.EventListener;
 import org.opennms.netmgt.model.OnmsIpInterface;
-import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.scheduler.LegacyScheduler;
 import org.opennms.netmgt.scheduler.Scheduler;
 import org.opennms.netmgt.snmpinterfacepoller.pollable.PollableInterface;
@@ -254,8 +249,7 @@ public class SnmpPoller extends AbstractServiceDaemon {
     /**
      * <p>schedulePollableInterface</p>
      *
-     * @param nodeid a int.
-     * @param ipaddress a {@link java.lang.String} object.
+     * @param iface a {@link org.opennms.netmgt.model.OnmsIpInterface} object.
      */
     protected void schedulePollableInterface(OnmsIpInterface iface) {
         String ipaddress = iface.getIpAddress().getHostAddress();
@@ -387,11 +381,7 @@ public class SnmpPoller extends AbstractServiceDaemon {
             }
         } else {
             DaemonTools.handleReloadEvent(event, "SnmpPoller", e -> {
-                try {
-                    doConfigReload(e);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
+                doConfigReload(e);
             });
         }
     }

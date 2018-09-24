@@ -48,6 +48,7 @@ import org.opennms.netmgt.config.scriptd.ReloadScript;
 import org.opennms.netmgt.config.scriptd.StartScript;
 import org.opennms.netmgt.config.scriptd.StopScript;
 import org.opennms.netmgt.config.scriptd.Uei;
+import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.dao.api.NodeDao;
 import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.model.OnmsNode;
@@ -179,7 +180,7 @@ public class Executor {
 
             // check for reload event
             if (isReloadConfigEvent(m_event)) {
-                try {
+                DaemonTools.handleReloadEvent(m_event, "Scriptd", (event)->{
                     ScriptdConfigFactory.reload();
                     m_config = ScriptdConfigFactory.getInstance();
                     loadConfig();
@@ -197,9 +198,7 @@ public class Executor {
                     }
 
                     LOG.debug("Scriptd configuration reloaded");
-                } catch (Throwable e) {
-                    LOG.error("Unable to reload Scriptd configuration: ", e);
-                }
+                });
             }
 
             Script[] attachedScripts = m_event.getScript();

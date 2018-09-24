@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.opennms.core.utils.InsufficientInformationException;
+import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.daemon.SpringServiceDaemon;
 import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.events.api.EventIpcManager;
@@ -138,9 +139,9 @@ public class TroubleTicketer implements SpringServiceDaemon, EventListener {
 	 * @return <code>java.lang.String</code> representing the name of this service daemon
 	 */
     @Override
-	public String getName() {
-		return "OpenNMS.TroubleTicketer";
-	}
+    public String getName() {
+        return "OpenNMS.TroubleTicketer";
+    }
 
 	/**
 	 * {@inheritDoc}
@@ -150,17 +151,27 @@ public class TroubleTicketer implements SpringServiceDaemon, EventListener {
     @Override
 	public void onEvent(Event e) {
         try {
-		if (EventConstants.TROUBLETICKET_CANCEL_UEI.equals(e.getUei())) {
-			handleCancelTicket(e);
-		} else if (EventConstants.TROUBLETICKET_CLOSE_UEI.equals(e.getUei())) {
-			handleCloseTicket(e);
-		} else if (EventConstants.TROUBLETICKET_CREATE_UEI.equals(e.getUei())) {
-			handleCreateTicket(e);
-		} else if (EventConstants.TROUBLETICKET_UPDATE_UEI.equals(e.getUei())) {
-			handleUpdateTicket(e);
-		} else if (isReloadConfigEvent(e)) {
-            handleTicketerReload(e);
- 		}
+            if (EventConstants.TROUBLETICKET_CANCEL_UEI.equals(e.getUei())) {
+                handleCancelTicket(e);
+            } else if (EventConstants.TROUBLETICKET_CLOSE_UEI.equals(e.getUei())) {
+                handleCloseTicket(e);
+            } else if (EventConstants.TROUBLETICKET_CREATE_UEI.equals(e.getUei())) {
+                handleCreateTicket(e);
+            } else if (EventConstants.TROUBLETICKET_UPDATE_UEI.equals(e.getUei())) {
+                handleUpdateTicket(e);
+            } else if (isReloadConfigEvent(e)) {
+                Parm parm = e.getParm(EventConstants.PARM_DAEMON_NAME);
+                if ("Ticketd".equalsIgnoreCase(parm.getValue().getContent())) {
+                    DaemonTools.handleReloadEvent(e, "ticketd", event -> {
+                        handleTicketerReload(event);
+                    });
+                }
+                if ("Ticketer".equalsIgnoreCase(parm.getValue().getContent())) {
+                    DaemonTools.handleReloadEvent(e, "ticketer", event -> {
+                        handleTicketerReload(event);
+                    });
+                }
+            }
         } catch (InsufficientInformationException ex) {
             LOG.warn("Unable to create trouble ticket due to lack of information: {}", ex.getMessage());
         } catch (Throwable t) {
@@ -243,7 +254,8 @@ public class TroubleTicketer implements SpringServiceDaemon, EventListener {
         if (EventConstants.RELOAD_DAEMON_CONFIG_UEI.equals(event.getUei())) {
             List<Parm> parmCollection = event.getParmCollection();
             for (Parm parm : parmCollection) {
-                if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) && "Ticketd".equalsIgnoreCase(parm.getValue().getContent())) {
+                if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) &&
+                        ("Ticketd".equalsIgnoreCase(parm.getValue().getContent()) || "ticketer".equalsIgnoreCase(parm.getValue().getContent()))) {
                     isTarget = true;
                     break;
                 }
