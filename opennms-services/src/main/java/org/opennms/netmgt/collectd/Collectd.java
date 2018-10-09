@@ -615,11 +615,6 @@ public class Collectd extends AbstractServiceDaemon implements
     /**
      * Returns true if specified address/pkg pair is already represented in
      * the collectable services list. False otherwise.
-     * 
-     * @param iface
-     *            TODO
-     * @param spec
-     *            TODO
      */
     private boolean alreadyScheduled(OnmsIpInterface iface, CollectionSpecification spec) {
         String ipAddress = str(iface.getIpAddress());

@@ -313,8 +313,7 @@ public class Ackd implements SpringServiceDaemon, DisposableBean {
     public void handleReloadConfigEvent(Event event) {
         LOG.info("handleReloadConfigEvent: processing reload event: {}", event);
 
-        DaemonTools.handleReloadEvent(event, NAME, (e) ->
-        {
+        DaemonTools.handleReloadEvent(event, NAME, (e) -> {
             m_configDao.reloadConfiguration();
             LOG.debug("handleReloadConfigEvent: restarting readers due to reload configuration event...");
             this.restartReaders(true);

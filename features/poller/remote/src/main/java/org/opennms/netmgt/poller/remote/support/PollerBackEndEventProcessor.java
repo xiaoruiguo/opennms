@@ -72,9 +72,7 @@ public class PollerBackEndEventProcessor {
      */
     @EventHandler(uei=EventConstants.RELOAD_DAEMON_CONFIG_UEI)
     public void handleDaemonConfigChanged(final Event event) {
-        DaemonTools.handleReloadEvent(event, "PollerBackEnd", (e)->{
-            m_pollerBackEnd.configurationUpdated();
-        });
+        DaemonTools.handleReloadEvent(event, "PollerBackEnd", (e)-> m_pollerBackEnd.configurationUpdated());
     }
 
     /**

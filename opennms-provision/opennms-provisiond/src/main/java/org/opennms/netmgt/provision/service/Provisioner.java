@@ -293,7 +293,6 @@ public class Provisioner implements SpringServiceDaemon {
     /**
      * <p>createForceRescanScan</p>
      *
-     * @param nodeId
      * @return a {@link org.opennms.netmgt.provision.service.ForceRescanScan} object.
      */
     public ForceRescanScan createForceRescanScan(Integer nodeId) {

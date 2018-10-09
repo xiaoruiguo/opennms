@@ -39,7 +39,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DaemonTools {
-
+    /**
+     * Interface to accept the implementation of configuration reloading.
+     * This is used instead of {@link Consumer} as this allows throwing Exceptions
+     * @param <T>
+     */
     public interface Action<T> {
         void accept(T t) throws Exception;
     }
@@ -71,8 +75,6 @@ public class DaemonTools {
     }
 
     /**
-     * <p>handleReloadEvent</p>
-     *
      * Handles the ReloadEvent of Daemons, to have a standardized way they are done.
      *
      * @param e                          the Reload Event with the uei {@link EventConstants#RELOAD_DAEMON_CONFIG_UEI}
@@ -111,8 +113,9 @@ public class DaemonTools {
                 LOG.error("Reload failed.", t);
             }
 
-            if (targetFile != null)
+            if (targetFile != null) {
                 ebldr.addParam(EventConstants.PARM_CONFIG_FILE_NAME, targetFile);
+            }
             ebldr.addParam(EventConstants.PARM_DAEMON_NAME, daemonName);
             EventIpcManagerFactory.getIpcManager().sendNow(ebldr.getEvent());
         }
