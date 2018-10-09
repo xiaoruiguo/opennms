@@ -41,8 +41,7 @@ import org.slf4j.LoggerFactory;
 public class DaemonTools {
     /**
      * Interface to accept the implementation of configuration reloading.
-     * This is used instead of {@link Consumer} as this allows throwing Exceptions
-     * @param <T>
+     * This is used instead of {@link Consumer} as it allows throwing Exceptions
      */
     public interface Action<T> {
         void accept(T t) throws Exception;
@@ -51,7 +50,6 @@ public class DaemonTools {
     public static final Logger LOG = LoggerFactory.getLogger(DaemonTools.class);
 
     /**
-     * Equivalent to:
      * @see #handleReloadEvent(Event, String, String, Action, Consumer)
      */
     public static void handleReloadEvent(Event e, String daemonName, Action<Event> handleConfigurationChanged) {
@@ -59,7 +57,6 @@ public class DaemonTools {
     }
 
     /**
-     * Equivalent to:
      * @see #handleReloadEvent(Event, String, String, Action, Consumer)
      */
     public static void handleReloadEvent(Event e, String daemonName, Action<Event> handleConfigurationChanged, Consumer<Exception> exceptionHandler) {
@@ -67,7 +64,6 @@ public class DaemonTools {
     }
 
     /**
-     * Equivalent to:
      * @see #handleReloadEvent(Event, String, String, Action, Consumer)
      */
     public static void handleReloadEvent(Event e, String daemonName, String targetFile, Action<Event> handleConfigurationChanged) {
