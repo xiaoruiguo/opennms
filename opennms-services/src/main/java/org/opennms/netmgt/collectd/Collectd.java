@@ -1154,11 +1154,9 @@ public class Collectd extends AbstractServiceDaemon implements
             }
         }
 
-        if(isDataCollectionConfig){
-            DaemonTools.handleReloadEvent(event, collectionDaemonName, targetFile,  (e) -> {
-                DataCollectionConfigFactory.reload();
-            });
-        }else{
+        if (isDataCollectionConfig) {
+            DaemonTools.handleReloadEvent(event, collectionDaemonName, targetFile,  (e) -> DataCollectionConfigFactory.reload());
+        } else {
             final String cfgFile = ConfigFileConstants.getFileName(ConfigFileConstants.COLLECTD_CONFIG_FILE_NAME);
             DaemonTools.handleReloadEvent(event, collectionDaemonName, cfgFile,  (e) -> {
                 m_collectdConfigFactory.reload();
@@ -1424,11 +1422,6 @@ public class Collectd extends AbstractServiceDaemon implements
         return m_scheduler;
     }
 
-    /**
-     * <p>setCollectorConfigDao</p>
-     *
-     * @param collectdConfigFactory a {@link org.opennms.netmgt.config.CollectdConfigFactory} object.
-     */
     void setCollectdConfigFactory(CollectdConfigFactory collectdConfigFactory) {
         m_collectdConfigFactory = collectdConfigFactory;
     }
