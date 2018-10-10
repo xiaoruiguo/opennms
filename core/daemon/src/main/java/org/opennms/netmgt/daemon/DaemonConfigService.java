@@ -46,7 +46,7 @@ public interface DaemonConfigService {
 
 //
 //    public static void main(String[] args) {
-//        final DaemonConfigService myObject = new WorkInProgressDaemonConfigService();
+//        final DaemonConfigService myObject = new DefaultDaemonConfigService();
 //
 //        final InvocationHandler handler = (proxy, method, args1) -> {
 //            long start = System.currentTimeMillis();

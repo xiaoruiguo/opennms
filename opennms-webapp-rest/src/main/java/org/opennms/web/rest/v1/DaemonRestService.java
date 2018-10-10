@@ -46,51 +46,29 @@ import org.springframework.stereotype.Component;
 
 @Component("daemonRestService")
 @Path("daemons")
-public class DaemonRestService extends OnmsRestService {
+public class DaemonRestService {
+
     @Autowired
     private DaemonConfigService configService;
 
-    public DaemonRestService(){
-    }
-
-    /**
-     * <p>getDaemons</p>
-     *
-     * @return a {@link DaemonDTO} Array.
-     */
     @GET
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, MediaType.APPLICATION_ATOM_XML})
     public DaemonDTO[] getDaemons(@Context final UriInfo uriInfo) {
         return this.configService.getDaemons();
     }
 
-    /**
-     *
-     * @param daemonName
-     * @return 204 if the daemon with the given name was found and reloaded,
-     * 428 if the daemon is not reloadable
-     *
-     * 404 if the daemon is not found
-     * (Should work automatically since the service throws a NoSuchElementException)
-     */
     @POST
-    @Path("reload/{daemonName}")
+    @Path("/reload/{daemonName}")
     public Response reloadDaemonByName(@PathParam("daemonName") String daemonName) {
-
         if(this.configService.reloadDaemon(daemonName)){
-            return Response.noContent().build(); //204
+            return Response.noContent().build();
         }
-        return  Response.status(428).build();
+        // TODO zottel correct status code or use another one ?!
+        return Response.status(428).build();
     }
 
-    /**
-     *
-     * @param daemonName
-     * @return Gets a {@link DaemonReloadStateDTO}
-     * or null if the name does not exist
-     */
     @GET
-    @Path("checkReloadState/{daemonName}")
+    @Path("/checkReloadState/{daemonName}")
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML, MediaType.APPLICATION_ATOM_XML})
     public DaemonReloadStateDTO getDaemonReloadState(@PathParam("daemonName") String daemonName) {
         return this.configService.getDaemonReloadState(daemonName);

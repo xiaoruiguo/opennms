@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2018 The OpenNMS Group, Inc.
+ * Copyright (C) 2018-2018 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2018 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -54,7 +54,7 @@ import org.opennms.netmgt.model.OnmsEvent;
 import org.opennms.netmgt.model.events.EventBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 
-public class WorkInProgressDaemonConfigService implements DaemonConfigService {
+public class DefaultDaemonConfigService implements DaemonConfigService {
 
     @Autowired
     private EventForwarder eventForwarder;
@@ -72,7 +72,7 @@ public class WorkInProgressDaemonConfigService implements DaemonConfigService {
     private Map<String, String> wrongDaemonNameMap;
     private Map<String, String> wrongEventMap;
 
-    public WorkInProgressDaemonConfigService() throws IOException {
+    public DefaultDaemonConfigService() throws IOException {
 
         //TODO: Clean up. After equalize the Daemon Behaviour and reworking ServieConfiguration.xml, this methode should be avoidable
         fillDaemonLists();
