@@ -35,6 +35,7 @@ import javax.sql.DataSource;
 
 import org.opennms.netmgt.config.EventTranslatorConfig;
 import org.opennms.netmgt.daemon.AbstractServiceDaemon;
+import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.events.api.EventIpcManager;
 import org.opennms.netmgt.events.api.EventListener;
@@ -147,7 +148,16 @@ public class EventTranslator extends AbstractServiceDaemon implements EventListe
     public void onEvent(Event e) {
 
         if (isReloadConfigEvent(e)) {
-            handleReloadEvent(e);
+            DaemonTools.handleReloadEvent(e, "EventTranslator", (event)->{
+                List<String> previousUeis = m_config.getUEIList();
+                m_config.update();
+
+                //need to re-register the UEIs not including those the daemon
+                //registered separate from the config (i.e. reloadDaemonConfig)
+                getEventManager().removeEventListener(this, previousUeis);
+                getEventManager().addEventListener(this, m_config.getUEIList());
+                LOG.debug("onEvent: configuration reloaded.");
+            });
             return;
         }
 
@@ -219,8 +229,9 @@ public class EventTranslator extends AbstractServiceDaemon implements EventListe
             List<Parm> parmCollection = event.getParmCollection();
 
             for (Parm parm : parmCollection) {
-                if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) && 
-                        "Translator".equalsIgnoreCase(parm.getValue().getContent())) {
+                if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) &&
+                        ("EventTranslator".equalsIgnoreCase(parm.getValue().getContent()) ||
+                                "Translator".equalsIgnoreCase(parm.getValue().getContent()))) {
                     isTarget = true;
                     break;
                 }
