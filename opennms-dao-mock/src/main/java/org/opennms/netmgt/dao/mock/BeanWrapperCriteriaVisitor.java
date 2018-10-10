@@ -151,7 +151,7 @@ public class BeanWrapperCriteriaVisitor implements CriteriaVisitor {
         if (m_offset != null && m_offset > 0) {
             matches = matches.subList(m_offset, matches.size());
         }
-        if (m_limit != null && m_limit > 0) {
+        if (m_limit != null && m_limit > 0 && m_limit < m_matching.size()) {
             matches = matches.subList(0, m_limit);
         }
         if (m_distinct) {
