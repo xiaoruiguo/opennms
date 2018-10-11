@@ -244,13 +244,8 @@ public class SnmpPoller extends AbstractServiceDaemon {
     	for (OnmsIpInterface iface : getNetwork().getContext().getPollableNodes()) {
             schedulePollableInterface(iface);    		
     	}
-    }   
+    }
 
-    /**
-     * <p>schedulePollableInterface</p>
-     *
-     * @param iface a {@link org.opennms.netmgt.model.OnmsIpInterface} object.
-     */
     protected void schedulePollableInterface(OnmsIpInterface iface) {
         String ipaddress = iface.getIpAddress().getHostAddress();
         String netmask = null;
