@@ -350,7 +350,7 @@ public class Vacuumd extends AbstractServiceDaemon implements Runnable, EventLis
     /** {@inheritDoc} */
     @Override
     public void onEvent(Event event) {
-        if (!EventConstants.RELOAD_DAEMON_CONFIG_UEI.equals(event.getUei())) {
+        if (EventConstants.RELOAD_DAEMON_CONFIG_UEI.equals(event.getUei())) {
             DaemonTools.handleReloadEvent(event, getName(), (e) -> {
                 LOG.debug("onEvent: Number of elements in schedule:{}; calling stop on scheduler...", m_scheduler.getScheduled());
                 stop();
