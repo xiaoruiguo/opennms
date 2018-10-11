@@ -33,10 +33,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -66,79 +64,17 @@ public class DefaultDaemonConfigService implements DaemonConfigService {
     private long maxConfigUpdateTime = 5000;
 
     private Set<String> ignoreList;
-    private Set<String> eventDaemons;
-    private Set<String> nonReloadableDaemons;
-
-    private Map<String, String> wrongDaemonNameMap;
-    private Map<String, String> wrongEventMap;
 
     public DefaultDaemonConfigService() throws IOException {
+        this.ignoreList = new HashSet<>(Arrays.asList("Manager".toLowerCase(), "TestLoadLibraries".toLowerCase()));
 
-        //TODO: Clean up. After equalize the Daemon Behaviour and reworking ServieConfiguration.xml, this methode should be avoidable
-        fillDaemonLists();
-
-        //Hacked: Because The ServiceConfigFactory only gives us the enabled ones
         final File cfgFile = ConfigFileConstants.getFile(ConfigFileConstants.SERVICE_CONF_FILE_NAME);
         final ServiceConfiguration config = JaxbUtils.unmarshal(ServiceConfiguration.class, cfgFile);
 
         for (Service s : config.getServices()) {
             String name = s.getName().split("=")[1].toLowerCase(); //OpenNMS:Name=Manager => Manager => manager
-            this.daemonList.add(new DaemonDTO(name, ignoreList.contains(name), s.isEnabled(), eventDaemons.contains(name) && s.isEnabled()));
+            this.daemonList.add(new DaemonDTO(name, ignoreList.contains(name), s.isEnabled(), s.isReloadable() && s.isEnabled()));
         }
-
-    }
-
-    private void fillDaemonLists() {
-        this.ignoreList = new HashSet<>(Arrays.asList("Manager".toLowerCase(), "TestLoadLibraries".toLowerCase()));
-
-        //The daemons that behave "normal"
-        this.eventDaemons = new HashSet<>(Arrays.asList(
-                "bsmd",
-                "eventd",
-                "notifd",
-                "pollerd",
-                "collectd",
-                "discovery",
-                "vacuumd",
-                "statsd",
-                "provisiond",
-                "reportd",
-                "ackd",
-                "telemetryd",
-
-                "pollerbackend",            // seems to work but does not say so
-                "scriptd",                  // seems to work but does not say so
-                "alarmd",                   // Does nothing but function is called, but does not say so either
-                "eventtranslator",          // works with wrong Name = translator
-                "ticketer",                 // works with wrong Name = ticketd  And does nothing but function is called
-
-                //normally not enabled
-                "tl1d",                     //works
-                "snmppoller"                //works with wrong Event but doesn't say so
-        ));
-
-        this.wrongDaemonNameMap = new HashMap<>();
-        this.wrongDaemonNameMap.put("eventtranslator", "translator");
-        this.wrongDaemonNameMap.put("ticketer", "ticketd");
-
-        this.wrongEventMap = new HashMap<>();
-        this.wrongEventMap.put("snmppoller", EventConstants.SNMPPOLLERCONFIG_CHANGED_EVENT_UEI);
-
-        this.nonReloadableDaemons = new HashSet<>(Arrays.asList(
-                "enhancedlinkd",
-                "actiond",
-                "trapd",
-                "queued",
-                "rtcd",
-                "jettyserver",
-                "passivestatusd",
-
-                //not enabled normally
-                "syslogd",
-                "correlator",
-                "dhcpd",
-                "asteriskgateway"
-        ));
     }
 
     @Override
@@ -150,28 +86,17 @@ public class DefaultDaemonConfigService implements DaemonConfigService {
 
     @Override
     public boolean reloadDaemon(String daemonName) {
-
         Optional<DaemonDTO> daemon = this.daemonList.stream()
                 .filter(x -> x.getName().equalsIgnoreCase(daemonName))
                 .findFirst();
 
-        if(!daemon.isPresent())
+        if (!daemon.isPresent()) {
             throw new NoSuchElementException();
+        }
 
         if (daemon.get().isReloadable()) {
-
-            String reloadDaemonName = daemonName.toLowerCase();
-            String reloadEventName = EventConstants.RELOAD_DAEMON_CONFIG_UEI;
-
-            if (this.wrongEventMap.containsKey(reloadDaemonName)) {
-                reloadEventName = this.wrongEventMap.get(reloadDaemonName);
-            }
-            if (this.wrongDaemonNameMap.containsKey(reloadDaemonName)) {
-                reloadDaemonName = this.wrongDaemonNameMap.get(reloadDaemonName);
-            }
-
-            EventBuilder eventBuilder = new EventBuilder(reloadEventName, "Admin Daemon Manager");
-            eventBuilder.addParam(EventConstants.PARM_DAEMON_NAME, reloadDaemonName);
+            EventBuilder eventBuilder = new EventBuilder(EventConstants.RELOAD_DAEMON_CONFIG_UEI, "Daemon Config Service");
+            eventBuilder.addParam(EventConstants.PARM_DAEMON_NAME, daemonName.toLowerCase());
             this.eventForwarder.sendNow(eventBuilder.getEvent());
 
             return true;
@@ -188,12 +113,6 @@ public class DefaultDaemonConfigService implements DaemonConfigService {
         if (!daemon.isPresent()) {
             throw new NoSuchElementException();
         }
-        String reloadDaemonName = daemonName.toLowerCase();
-
-        if (this.wrongDaemonNameMap.containsKey(reloadDaemonName)) {
-            reloadDaemonName = this.wrongDaemonNameMap.get(reloadDaemonName);
-        }
-
 
         List<OnmsEvent> lastReloadEventList = this.eventDao.findMatching(
                 new CriteriaBuilder(OnmsEvent.class)
@@ -233,10 +152,12 @@ public class DefaultDaemonConfigService implements DaemonConfigService {
                         .toCriteria()
         );
 
-        if (lastReloadResultEventList.size() < 1)
+        if (lastReloadResultEventList.isEmpty())
             return new DaemonReloadStateDTO(lastReloadEventTime, null, DaemonReloadState.Reloading);
 
         OnmsEvent lastReloadResultEvent = lastReloadResultEventList.get(0);
+
+
         if (lastReloadResultEvent.getEventUei().equals(EventConstants.RELOAD_DAEMON_CONFIG_SUCCESSFUL_UEI)) {
             return new DaemonReloadStateDTO(lastReloadEventTime, lastReloadResultEvent.getEventTime().getTime(), DaemonReloadState.Success);
         } else {
