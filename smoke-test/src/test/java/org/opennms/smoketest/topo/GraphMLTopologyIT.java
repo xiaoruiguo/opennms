@@ -252,7 +252,7 @@ public class GraphMLTopologyIT extends OpenNMSSeleniumTestCase {
             newIconName = "IP_service";
         }
         topologyUIPage.findVertex(label).changeIcon(newIconName);
-        waitFor(1);
+        waitFor(4);
         topologyUIPage.refreshNow();
         assertEquals(newIconName, topologyUIPage.findVertex(label).getIconName());
     }
