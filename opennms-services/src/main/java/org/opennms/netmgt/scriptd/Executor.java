@@ -28,6 +28,7 @@
 
 package org.opennms.netmgt.scriptd;
 
+import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.Map;
@@ -50,10 +51,8 @@ import org.opennms.netmgt.config.scriptd.StopScript;
 import org.opennms.netmgt.config.scriptd.Uei;
 import org.opennms.netmgt.daemon.DaemonTools;
 import org.opennms.netmgt.dao.api.NodeDao;
-import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.xml.event.Event;
-import org.opennms.netmgt.xml.event.Parm;
 import org.opennms.netmgt.xml.event.Script;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -177,28 +176,15 @@ public class Executor {
          */
         @Override
         public void run() {
+            DaemonTools.handleReloadEvent(m_event, "Scriptd", (event) -> doConfigReload(event));
 
-            // check for reload event
-            if (isReloadConfigEvent(m_event)) {
-                DaemonTools.handleReloadEvent(m_event, "Scriptd", (event)->{
-                    ScriptdConfigFactory.reload();
-                    m_config = ScriptdConfigFactory.getInstance();
-                    loadConfig();
-
-                    for (final ReloadScript script : m_config.getReloadScripts()) {
-                        if (script.getContent().isPresent()) {
-                            try {
-                                m_scriptManager.exec(script.getLanguage(), "", 0, 0, script.getContent().get());
-                            } catch (BSFException e) {
-                                LOG.error("Reload script[{}] failed.", script, e);
-                            }
-                        } else {
-                            LOG.warn("Reload Script does not have script contents: " + script);
-                        }
-                    }
-
-                    LOG.debug("Scriptd configuration reloaded");
-                });
+            // Deprecating this one...
+            if ("uei.opennms.org/internal/reloadScriptConfig".equals(m_event.getUei())) {
+                try {
+                    doConfigReload(m_event);
+                } catch (Throwable e) {
+                    LOG.error("Unable to reload Scriptd configuration: ", e);
+                }
             }
 
             Script[] attachedScripts = m_event.getScript();
@@ -282,24 +268,26 @@ public class Executor {
         } // end run
     }
 
-    private static boolean isReloadConfigEvent(Event event) {
-        boolean isTarget = false;
-        
-        if (EventConstants.RELOAD_DAEMON_CONFIG_UEI.equals(event.getUei())) {
-            List<Parm> parmCollection = event.getParmCollection();
-            
-            for (Parm parm : parmCollection) {
-                if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) && "Scriptd".equalsIgnoreCase(parm.getValue().getContent())) {
-                    isTarget = true;
-                    break;
+    private void doConfigReload(final Event event) throws IOException {
+        LOG.debug("reloadConfig: managing event: {}", event.getUei());
+
+        ScriptdConfigFactory.reload();
+        m_config = ScriptdConfigFactory.getInstance();
+        loadConfig();
+
+        for (final ReloadScript script : m_config.getReloadScripts()) {
+            if (script.getContent().isPresent()) {
+                try {
+                    m_scriptManager.exec(script.getLanguage(), "", 0, 0, script.getContent().get());
+                } catch (BSFException e) {
+                    LOG.error("Reload script[{}] failed.", script, e);
                 }
+            } else {
+                LOG.warn("Reload Script does not have script contents: " + script);
             }
-        } else if ("uei.opennms.org/internal/reloadScriptConfig".equals(event.getUei())) {
-            // Deprecating this one...
-            isTarget = true;
         }
-        
-        return isTarget;
+
+        LOG.debug("Scriptd configuration reloaded");
     }
 
     public synchronized void start() {

@@ -707,23 +707,6 @@ public class Provisioner implements SpringServiceDaemon {
             LOG.debug("handleRelodConfigEvent: reports rescheduled.");
         });
     }
-    
-    private boolean isReloadConfigEventTarget(Event event) {
-        boolean isTarget = false;
-        
-        List<Parm> parmCollection = event.getParmCollection();
-        
-
-        for (Parm parm : parmCollection) {
-            if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) && "Provisiond".equalsIgnoreCase(parm.getValue().getContent())) {
-                isTarget = true;
-                break;
-            }
-        }
-        
-        LOG.debug("isReloadConfigEventTarget: Provisiond was target of reload event: {}", isTarget);
-        return isTarget;
-    }
 
     /**
      * <p>handleAddNode</p>

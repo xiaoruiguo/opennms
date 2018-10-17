@@ -40,7 +40,6 @@ import org.opennms.netmgt.events.api.annotations.EventHandler;
 import org.opennms.netmgt.events.api.annotations.EventListener;
 import org.opennms.netmgt.filter.api.FilterDao;
 import org.opennms.netmgt.measurements.api.MeasurementFetchStrategy;
-import org.opennms.netmgt.model.events.EventUtils;
 import org.opennms.netmgt.xml.event.Event;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
@@ -101,34 +100,22 @@ public class Statsd implements SpringServiceDaemon {
      */
     @EventHandler(uei=EventConstants.RELOAD_DAEMON_CONFIG_UEI)
     public void handleReloadConfigEvent(Event e) {
-        
-        if (isReloadConfigEventTarget(e)) {
-            DaemonTools.handleReloadEvent(e, "Statsd", (event) -> {
-                LOG.debug("handleReloadConfigEvent: acquiring lock...");
-                synchronized (m_scheduler) {
-                    LOG.debug("handleReloadConfigEvent: lock acquired, unscheduling current reports...");
-                    unscheduleReports();
-                    m_reportDefinitionBuilder.reload();
-                    LOG.debug("handleReloadConfigEvent: config remarshaled, unscheduling current reports...");
-                    LOG.debug("handleReloadConfigEvent: reports unscheduled, rescheduling...");
-                    start();
-                    LOG.debug("handleRelodConfigEvent: reports rescheduled.");
-                }
-                LOG.debug("handleReloadConfigEvent: lock released.");
-            });
-        }
+
+        DaemonTools.handleReloadEvent(e, "Statsd", (event) -> {
+            LOG.debug("handleReloadConfigEvent: acquiring lock...");
+            synchronized (m_scheduler) {
+                LOG.debug("handleReloadConfigEvent: lock acquired, unscheduling current reports...");
+                unscheduleReports();
+                m_reportDefinitionBuilder.reload();
+                LOG.debug("handleReloadConfigEvent: config remarshaled, unscheduling current reports...");
+                LOG.debug("handleReloadConfigEvent: reports unscheduled, rescheduling...");
+                start();
+                LOG.debug("handleRelodConfigEvent: reports rescheduled.");
+            }
+            LOG.debug("handleReloadConfigEvent: lock released.");
+        });
     }
-    
-    private boolean isReloadConfigEventTarget(Event event) {
-        boolean isTarget = false;
-        
-        if ("Statsd".equalsIgnoreCase(EventUtils.getParm(event, EventConstants.PARM_DAEMON_NAME))) {
-            isTarget = true;
-        }
-        
-        LOG.debug("isReloadConfigEventTarget: Statsd was target of reload event: {}", isTarget);
-        return isTarget;
-    }
+
     /*
      * (non-Javadoc)
      * @see org.opennms.netmgt.daemon.SpringServiceDaemon#start()

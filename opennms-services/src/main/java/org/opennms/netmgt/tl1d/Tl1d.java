@@ -46,7 +46,6 @@ import org.opennms.netmgt.events.api.annotations.EventHandler;
 import org.opennms.netmgt.events.api.annotations.EventListener;
 import org.opennms.netmgt.model.events.EventBuilder;
 import org.opennms.netmgt.xml.event.Event;
-import org.opennms.netmgt.xml.event.Parm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +66,7 @@ public class Tl1d extends AbstractServiceDaemon {
      * The last status sent to the service control manager.
      */
     private volatile int m_status = START_PENDING;
-    private volatile Thread m_tl1MesssageProcessor;
+    private volatile Thread m_tl1MessageProcessor;
     private volatile EventForwarder m_eventForwarder;
 	private volatile Tl1ConfigurationDao m_configurationDao;
 
@@ -86,46 +85,28 @@ public class Tl1d extends AbstractServiceDaemon {
      *
      * @param e a {@link org.opennms.netmgt.xml.event.Event} object.
      */
-    @EventHandler(uei=EventConstants.RELOAD_DAEMON_CONFIG_UEI)
+    @EventHandler(uei =EventConstants.RELOAD_DAEMON_CONFIG_UEI)
     public void handleRelooadConfigurationEvent(Event e) {
-        if(isReloadConfigEventTarget(e)){
-            DaemonTools.handleReloadEvent(e, "Tl1d", (d) -> {
-                stopListeners();
-                removeClients();
-                /*
-                 * leave everything currently on the queue, no need to mess with that, might want a handler
-                 * someday for emptying the current queue on a reload event or even a pause clients or something.
-                 *
-                 * Don't interrupt message processor, it simply waits on the queue from something to be added.
-                 *
-                 */
+        DaemonTools.handleReloadEvent(e, "Tl1d", (d) -> {
+            stopListeners();
+            removeClients();
+            /*
+             * leave everything currently on the queue, no need to mess with that, might want a handler
+             * someday for emptying the current queue on a reload event or even a pause clients or something.
+             *
+             * Don't interrupt message processor, it simply waits on the queue from something to be added.
+             *
+             */
 
-                m_configurationDao.update();
+            m_configurationDao.update();
 
-                initializeTl1Connections();
+            initializeTl1Connections();
 
-                startClients();
+            startClients();
 
-                LOG.debug("handleReloadConfigurationEvent: {} defined.", m_tl1Clients.size());
-                LOG.info("handleReloadConfigurationEvent: completed.");
-            });
-        }
-    }
-
-    private boolean isReloadConfigEventTarget(Event event) {
-        boolean isTarget = false;
-
-        List<Parm> parmCollection = event.getParmCollection();
-
-        for (Parm parm : parmCollection) {
-            if (EventConstants.PARM_DAEMON_NAME.equals(parm.getParmName()) && "Tl1d".equalsIgnoreCase(parm.getValue().getContent())) {
-                isTarget = true;
-                break;
-            }
-        }
-
-        LOG.debug("isReloadConfigEventTarget: Tl1d was target of reload event: {}", isTarget);
-        return isTarget;
+            LOG.debug("handleReloadConfigurationEvent: {} defined.", m_tl1Clients.size());
+            LOG.info("handleReloadConfigurationEvent: completed.");
+        });
     }
 
     /**
@@ -143,7 +124,7 @@ public class Tl1d extends AbstractServiceDaemon {
     public synchronized void onStart() {
         LOG.info("onStart: Initializing Tl1d message processing.");
         
-        m_tl1MesssageProcessor = new Thread("Tl1-Message-Processor") {
+        m_tl1MessageProcessor = new Thread("Tl1-Message-Processor") {
             @Override
             public void run() {
                 doMessageProcessing();
@@ -151,7 +132,7 @@ public class Tl1d extends AbstractServiceDaemon {
         };
 
         LOG.info("onStart: starting message processing thread...");
-        m_tl1MesssageProcessor.start();
+        m_tl1MessageProcessor.start();
         LOG.info("onStart: message processing thread started.");
 
         startClients();
@@ -177,7 +158,7 @@ public class Tl1d extends AbstractServiceDaemon {
     @Override
 	public synchronized void onStop() {
 		stopListeners();
-        m_tl1MesssageProcessor.interrupt();
+        m_tl1MessageProcessor.interrupt();
 		removeClients();
 	}
 	
