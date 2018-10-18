@@ -318,8 +318,8 @@ public class AlarmPersisterImpl implements AlarmPersister {
     private OnmsAlarm createNewAlarm(OnmsEvent e, Event event) {
         OnmsAlarm alarm = new OnmsAlarm();
         // Situations are denoted by the existance of related-reductionKeys
-        //alarm.setRelatedAlarmsForSituation(getRelatedAlarms(event.getParmCollection()));
-        alarm.setRelatedAlarmsForSituation(getRelatedAlarms(event.getParmCollection()));
+        //alarm.setRelatedAlarms(getAssociatedAlarms(event.getParmCollection()));
+        alarm.setRelatedAlarms(getRelatedAlarms(event.getParmCollection()));
         alarm.setAlarmType(event.getAlarmData().getAlarmType());
         alarm.setClearKey(event.getAlarmData().getClearKey());
         alarm.setCounter(1);
@@ -356,7 +356,7 @@ public class AlarmPersisterImpl implements AlarmPersister {
         return reductionKeys.stream().map(reductionKey -> m_alarmDao.findByReductionKey(reductionKey)).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 
-   /* private Set<RelatedAlarm> getRelatedAlarms(OnmsAlarm situationAlarm, List<Parm> list) {
+   /* private Set<RelatedAlarm> getAssociatedAlarms(OnmsAlarm situationAlarm, List<Parm> list) {
         if (list == null || list.isEmpty()) {
             return Collections.emptySet();
         }

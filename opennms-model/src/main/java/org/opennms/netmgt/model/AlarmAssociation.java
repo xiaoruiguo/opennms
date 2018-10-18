@@ -31,41 +31,62 @@ package org.opennms.netmgt.model;
 import java.io.Serializable;
 import java.util.Date;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.IdClass;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 
 @Entity
-@IdClass(RelatedAlarm.RelatedAlarmId.class)
 @Table(name = "alarm_situations")
-public class RelatedAlarm implements Serializable {
+public class AlarmAssociation implements Serializable {
 
     private static final long serialVersionUID = 4115687014888009683L;
 
-    @Id
+    private Integer id;
+
     private OnmsAlarm situationAlarm;
 
-    @Id
     private OnmsAlarm relatedAlarm;
 
-    @Temporal(TemporalType.TIMESTAMP)
     private Date mappedTime;
 
-    public RelatedAlarm(OnmsAlarm situationAlarm, OnmsAlarm relatedAlarm) {
+    public AlarmAssociation() {
+    }
+
+    public AlarmAssociation(OnmsAlarm situationAlarm, OnmsAlarm relatedAlarm) {
         this(situationAlarm, relatedAlarm, new Date());
     }
 
-    public RelatedAlarm(OnmsAlarm situationAlarm, OnmsAlarm relatedAlarm, Date mappedTime) {
+    public AlarmAssociation(OnmsAlarm situationAlarm, OnmsAlarm relatedAlarm, Date mappedTime) {
+        this.mappedTime = mappedTime;
         this.situationAlarm = situationAlarm;
         this.relatedAlarm = relatedAlarm;
-        this.mappedTime = mappedTime;
     }
 
-    @Column(name = "situation_id")
+    @Id
+    @SequenceGenerator(name="alarmSequence", sequenceName="alarmsNxtId")
+    @GeneratedValue(generator="alarmSequence")
+    @Column(name="id", nullable=false)
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+
+    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "situation_id")
     public OnmsAlarm getSituationAlarm() {
         return situationAlarm;
     }
@@ -74,7 +95,8 @@ public class RelatedAlarm implements Serializable {
         this.situationAlarm = situationAlarm;
     }
 
-    @Column(name = "related_alarm_id")
+    @JoinColumn(name = "related_alarm_id")
+    @OneToOne
     public OnmsAlarm getRelatedAlarm() {
         return relatedAlarm;
     }
@@ -83,49 +105,15 @@ public class RelatedAlarm implements Serializable {
         this.relatedAlarm = relatedAlarm;
     }
 
-    public Date getMappedTime() {
-        return mappedTime;
-    }
 
-    @Column(name = "mapped_time")
     public void setMappedTime(Date mappedTime) {
         this.mappedTime = mappedTime;
     }
 
-    public static class RelatedAlarmId implements Serializable {
-
-        private static final long serialVersionUID = -581600834382814130L;
-        private OnmsAlarm situationAlarm;
-
-        private OnmsAlarm relatedAlarm;
-
-        public RelatedAlarmId() {
-        }
-
-        public RelatedAlarmId(OnmsAlarm situationAlarm, OnmsAlarm relatedAlarm) {
-            this.situationAlarm = situationAlarm;
-            this.relatedAlarm = relatedAlarm;
-        }
-
-        public RelatedAlarmId(OnmsAlarm situationAlarm) {
-            this.situationAlarm = situationAlarm;
-        }
-
-        public OnmsAlarm getSituationAlarm() {
-            return situationAlarm;
-        }
-
-        public void setSituationAlarm(OnmsAlarm situationAlarm) {
-            this.situationAlarm = situationAlarm;
-        }
-
-        public OnmsAlarm getRelatedAlarm() {
-            return relatedAlarm;
-        }
-
-        public void setRelatedAlarm(OnmsAlarm relatedAlarm) {
-            this.relatedAlarm = relatedAlarm;
-        }
+    @Column(name = "mapped_time")
+    @Temporal(TemporalType.TIMESTAMP)
+    public Date getMappedTime() {
+        return mappedTime;
     }
 
 }
