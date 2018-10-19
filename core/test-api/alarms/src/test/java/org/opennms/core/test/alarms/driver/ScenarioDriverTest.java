@@ -26,12 +26,29 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.alarmd.driver;
+package org.opennms.core.test.alarms.driver;
 
-import java.util.Date;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-public interface Action {
-    Date getTime();
+import org.junit.Test;
 
-    void visit(ActionVisitor visitor);
+public class ScenarioDriverTest {
+
+    @Test
+    public void canDriverSimpleScenario() {
+        final Scenario scenario = Scenario.builder()
+                .withLegacyAlarmBehavior()
+                .withNodeDownEvent(1, 1)
+                .withNodeUpEvent(2, 1)
+                .build();
+        final ScenarioResults results = play(scenario);
+        // Simple assertion to validate that we do have some results - this test isn't concerned with what they are though
+        assertThat(results, notNullValue());
+    }
+
+    private static ScenarioResults play(Scenario scenario) {
+        final JUnitScenarioDriver driver = new JUnitScenarioDriver();
+        return driver.run(scenario);
+    }
 }

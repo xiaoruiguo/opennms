@@ -26,24 +26,34 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.alarmd.driver;
+package org.opennms.core.test.alarms.driver;
 
-import org.opennms.netmgt.model.OnmsAlarm;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Result;
+import org.junit.runners.model.InitializationError;
 
-public class State {
-    private final long time;
-    private final OnmsAlarm alarm;
+public class JUnitScenarioDriver {
 
-    public State(long time, OnmsAlarm alarm) {
-        this.time = time;
-        this.alarm = alarm;
-    }
+    public ScenarioResults run(Scenario scenario) {
+        // Run the test
+        final JUnitCore jUnitCore = new JUnitCore();
+        final JUnitScenarioRunner runner;
+        try {
+            runner = new JUnitScenarioRunner(AlarmdDriver.class, scenario);
+        } catch (InitializationError initializationError) {
+            throw new IllegalStateException(initializationError);
+        }
 
-    public long getTime() {
-        return time;
-    }
+        final Result junitResult = jUnitCore.run(runner);
+        if(!junitResult.wasSuccessful()) {
+            throw new RuntimeException("Playback failed:" + junitResult.getFailures());
+        }
 
-    public OnmsAlarm getAlarm() {
-        return alarm;
+        final ScenarioResults results = runner.getResults();
+        if (results == null) {
+            throw new IllegalStateException("Results not set");
+        }
+
+        return results;
     }
 }

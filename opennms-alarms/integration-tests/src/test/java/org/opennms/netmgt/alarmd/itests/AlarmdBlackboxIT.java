@@ -26,7 +26,7 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.alarmd;
+package org.opennms.netmgt.alarmd.itests;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -35,17 +35,17 @@ import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.IsEqual.equalTo;
 import static org.hamcrest.core.IsNot.not;
-import static org.opennms.netmgt.alarmd.driver.AlarmMatchers.acknowledged;
-import static org.opennms.netmgt.alarmd.driver.AlarmMatchers.hasSeverity;
+import static org.opennms.core.test.alarms.AlarmMatchers.acknowledged;
+import static org.opennms.core.test.alarms.AlarmMatchers.hasSeverity;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
-import org.opennms.netmgt.alarmd.driver.JUnitScenarioDriver;
-import org.opennms.netmgt.alarmd.driver.Scenario;
-import org.opennms.netmgt.alarmd.driver.ScenarioResults;
-import org.opennms.netmgt.alarmd.driver.State;
+import org.opennms.core.test.alarms.driver.JUnitScenarioDriver;
+import org.opennms.core.test.alarms.driver.Scenario;
+import org.opennms.core.test.alarms.driver.ScenarioResults;
+import org.opennms.core.test.alarms.driver.State;
 import org.opennms.netmgt.model.OnmsSeverity;
 
 /**
