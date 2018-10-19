@@ -7,9 +7,22 @@
         "version": "1.0.0"
       },
       "dynamic_templates": [],
-      "properties":{},
-      "_all": {
-        "enabled": false
+      "properties":{
+        "@version": {
+          "type": "keyword"
+        },
+        "@first-event-time": {
+          "type": "date",
+          "format": "epoch_millis"
+        },
+        "@last-event-time": {
+          "type": "date",
+          "format": "epoch_millis"
+        },
+        "@update-time": {
+          "type": "date",
+          "format": "epoch_millis"
+        }
       }
     }
   },

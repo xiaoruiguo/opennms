@@ -355,6 +355,8 @@
 
 	    <!-- Integration API -->
 	    <feature>opennms-api-layer</feature>
+
+	    <feature>alarms-in-es</feature>
           </features>
         </configuration>
       </plugin>

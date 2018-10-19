@@ -44,14 +44,16 @@ import org.opennms.core.test.elastic.ElasticSearchServerConfig;
 import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.plugins.elasticsearch.rest.RestClientFactory;
+import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
+import org.opennms.plugins.elasticsearch.rest.template.IndexSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.searchbox.client.JestClient;
 import io.searchbox.core.Search;
 
-public class AlarmArchiverIT {
-    private static Logger LOG = LoggerFactory.getLogger(AlarmArchiverIT.class);
+public class AlarmToESIT {
+    private static Logger LOG = LoggerFactory.getLogger(AlarmToESIT.class);
 
     private static final String HTTP_PORT = "9205";
     private static final String HTTP_TRANSPORT_PORT = "9305";
@@ -81,14 +83,21 @@ public class AlarmArchiverIT {
         alarm1.setLastEventTime(alarm1.getFirstEventTime());
 
         final RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT);
+        AlarmsToES alarmsToES = null;
         try (final JestClient jestClient = restClientFactory.createClient()) {
-            final AlarmArchiver alarmArchiver = new AlarmArchiver(jestClient);
-            alarmArchiver.start();
-            alarmArchiver.onAlarmCreated(alarm1);
+            final IndexSettings indexSettings = new IndexSettings();
+            final AlarmTemplateInitializer templateInitializer = new AlarmTemplateInitializer(jestClient);
+            alarmsToES = new AlarmsToES(jestClient, IndexStrategy.MONTHLY, templateInitializer);
+            alarmsToES.init();
+            alarmsToES.onAlarmCreated(alarm1);
 
             final Search search = new Search.Builder("").addIndex("opennms-alarms-*").build();
             await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)
                     .until(() -> jestClient.execute(search).getTotal(), greaterThan(0L));
+        } finally {
+            if (alarmsToES != null) {
+                alarmsToES.destroy();
+            }
         }
     }
 }

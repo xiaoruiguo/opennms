@@ -50,10 +50,24 @@
         <argument value="elastic-credentials.xml" />
     </bean>
 
+    <!-- Metrics -->
+    <bean id="metricRegistry" class="com.codahale.metrics.MetricRegistry"/>
+    <bean id="metricRegistryJmxReporterBuilder" class="com.codahale.metrics.JmxReporter" factory-method="forRegistry">
+        <argument ref="metricRegistry"/>
+    </bean>
+    <bean id="metricRegistryDomainedJmxReporterBuilder" factory-ref="metricRegistryJmxReporterBuilder" factory-method="inDomain">
+        <argument value="org.opennms.netmgt.alarmsines"/>
+    </bean>
+    <bean id="metricRegistryJmxReporter"
+          factory-ref="metricRegistryDomainedJmxReporterBuilder"
+          factory-method="build"
+          init-method="start"
+          destroy-method="stop" />
+
     <!-- Configure node cache -->
     <bean id="nodeCacheConfig" class="org.opennms.core.cache.CacheConfig">
         <argument value="nodes"/>
-        <property name="metricRegistry" ref="flowRepositoryMetricRegistry" />
+        <property name="metricRegistry" ref="metricRegistry" />
         <property name="enabled" value="${nodeCache.enabled}" />
         <property name="maximumSize" value="${nodeCache.maximumSize}" />
         <property name="expireAfterWrite" value="${nodeCache.expireAfterWrite}" />
@@ -94,20 +108,25 @@
         <property name="routingPartitionSize" value="${settings.index.routing_partition_size}"/>
     </bean>
 
+    <!-- Template initializer -->
+    <bean id="templateInitializer" class="org.opennms.features.es.alarms.AlarmTemplateInitializer">
+        <argument ref="blueprintBundleContext"/>
+        <argument ref="jestClient"/>
+        <argument ref="indexSettings"/>
+    </bean>
+
     <!-- The repository -->
-    <bean id="elasticFlowRepository" class="org.opennms.features.es.alarms.AlarmsToES">
+    <bean id="alarmsToES" class="org.opennms.features.es.alarms.AlarmsToES" init-method="init" destroy-method="destroy">
         <argument ref="jestClient"/>
         <argument ref="indexStrategy"/>
-        <argument value="${bulkRetryCount}" />
+        <argument ref="templateInitializer" />
+        <property name="bulkRetryCount" value="${bulkRetryCount}" />
     </bean>
-    <!-- Proxy it, to ensure initialization on first call of any method -->
-    <bean id="initializingElasticFlowRepository" class="org.opennms.netmgt.flows.elastic.InitializingFlowRepository">
-        <argument ref="blueprintBundleContext" />
-        <argument ref="elasticFlowRepository" />
-        <argument ref="jestClient" />
-        <argument ref="indexSettings" />
-    </bean>
-    <service interface="org.opennms.netmgt.flows.api.FlowRepository" ref="initializingElasticFlowRepository" />
+    <service ref="alarmsToES" interface="org.opennms.netmgt.dao.api.AlarmEntityListener">
+        <service-properties>
+            <entry key="registration.export" value="true"/>
+        </service-properties>
+    </service>
 
     <!-- Health Check -->
     <service interface="org.opennms.core.health.api.HealthCheck">
