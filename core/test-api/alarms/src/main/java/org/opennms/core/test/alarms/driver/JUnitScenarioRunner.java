@@ -54,6 +54,7 @@ public class JUnitScenarioRunner extends OpenNMSJUnit4ClassRunner implements Tes
     @Override
     public void afterTestMethod(TestContext testContext)  {
         results = ((ScenarioHandler)testContext.getTestInstance()).getResults();
+        scenario.awaitUntilComplete();
     }
 
     @Override

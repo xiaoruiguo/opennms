@@ -47,6 +47,7 @@ import org.opennms.core.test.db.TemporaryDatabaseAware;
 import org.opennms.core.test.db.annotations.JUnitTemporaryDatabase;
 import org.opennms.netmgt.alarmd.AlarmPersisterImpl;
 import org.opennms.netmgt.alarmd.Alarmd;
+import org.opennms.netmgt.alarmd.drools.AlarmService;
 import org.opennms.netmgt.alarmd.drools.DroolsAlarmContext;
 import org.opennms.netmgt.dao.api.AlarmDao;
 import org.opennms.netmgt.dao.api.MonitoringLocationDao;
@@ -74,7 +75,8 @@ import org.springframework.transaction.support.TransactionTemplate;
         "classpath*:/META-INF/opennms/component-dao.xml",
         "classpath:/META-INF/opennms/applicationContext-daemon.xml",
         "classpath:/META-INF/opennms/mockEventIpcManager.xml",
-        "classpath:/META-INF/opennms/applicationContext-alarmd.xml"
+        "classpath:/META-INF/opennms/applicationContext-alarmd.xml",
+        "classpath*:/META-INF/opennms/applicationContext-alarm-driver-ext.xml"
 })
 @JUnitConfigurationEnvironment
 @JUnitTemporaryDatabase(dirtiesContext=false,tempDbClass=MockDatabase.class)
@@ -107,6 +109,9 @@ public class AlarmdDriver implements TemporaryDatabaseAware<MockDatabase>, Actio
     
     @Autowired
     private AlarmPersisterImpl m_alarmPersister;
+
+    @Autowired
+    private AlarmService m_alarmService;
 
     @Override
     public void setTemporaryDatabase(final MockDatabase database) {
@@ -249,10 +254,7 @@ public class AlarmdDriver implements TemporaryDatabaseAware<MockDatabase>, Actio
                     .filter(filter::apply)
                     .collect(Collectors.toList());
             alarms.forEach(a -> {
-                a.setAlarmAckUser(ackUser);
-                a.setAlarmAckTime(ackTime);
-                m_alarmDao.save(a);
-                m_droolsAlarmContext.handleNewOrUpdatedAlarm(a);
+                m_alarmService.acknowledgeAlarm(a, ackTime);
             });
             return null;
         });

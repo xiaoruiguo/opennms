@@ -29,39 +29,35 @@
 package org.opennms.features.es.alarms;
 
 import static com.jayway.awaitility.Awaitility.await;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.core.IsEqual.equalTo;
+import static org.opennms.core.test.alarms.AlarmMatchers.hasSeverity;
 
 import java.io.IOException;
-import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.opennms.core.test.MockLogAppender;
+import org.opennms.core.test.alarms.driver.Scenario;
+import org.opennms.core.test.alarms.driver.ScenarioResults;
+import org.opennms.core.test.alarms.driver.State;
 import org.opennms.core.test.elastic.ElasticSearchRule;
 import org.opennms.core.test.elastic.ElasticSearchServerConfig;
-import org.opennms.netmgt.events.api.EventConstants;
-import org.opennms.netmgt.model.OnmsAlarm;
+import org.opennms.netmgt.model.OnmsSeverity;
 import org.opennms.plugins.elasticsearch.rest.RestClientFactory;
-import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
-import org.opennms.plugins.elasticsearch.rest.template.IndexSettings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.searchbox.client.JestClient;
 import io.searchbox.core.Search;
 
 public class AlarmToESIT {
-    private static Logger LOG = LoggerFactory.getLogger(AlarmToESIT.class);
-
     private static final String HTTP_PORT = "9205";
     private static final String HTTP_TRANSPORT_PORT = "9305";
-
-    @BeforeClass
-    public static void setUpClass() {
-        MockLogAppender.setupLogging(true, "DEBUG");
-    }
 
     @Rule
     public ElasticSearchRule elasticSearchRule = new ElasticSearchRule(new ElasticSearchServerConfig()
@@ -75,29 +71,62 @@ public class AlarmToESIT {
 
     @Test
     public void canArchiveAlarms() throws IOException {
-        OnmsAlarm alarm1 = new OnmsAlarm();
-        alarm1.setId(1);
-        alarm1.setIfIndex(13);
-        alarm1.setUei(EventConstants.TOPOLOGY_LINK_DOWN_EVENT_UEI);
-        alarm1.setFirstEventTime(new Date());
-        alarm1.setLastEventTime(alarm1.getFirstEventTime());
-
+        ScenarioResults results = null;
         final RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT);
-        AlarmsToES alarmsToES = null;
         try (final JestClient jestClient = restClientFactory.createClient()) {
-            final IndexSettings indexSettings = new IndexSettings();
-            final AlarmTemplateInitializer templateInitializer = new AlarmTemplateInitializer(jestClient);
-            alarmsToES = new AlarmsToES(jestClient, IndexStrategy.MONTHLY, templateInitializer);
-            alarmsToES.init();
-            alarmsToES.onAlarmCreated(alarm1);
-
-            final Search search = new Search.Builder("").addIndex("opennms-alarms-*").build();
-            await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)
-                    .until(() -> jestClient.execute(search).getTotal(), greaterThan(0L));
-        } finally {
-            if (alarmsToES != null) {
-                alarmsToES.destroy();
-            }
+            Scenario scenario = Scenario.builder()
+                    .withLegacyAlarmBehavior()
+                    .withNodeDownEvent(1, 1)
+                    .withNodeUpEvent(2, 1)
+                    .awaitUntil(() -> {
+                        final Search search = new Search.Builder("").addIndex("opennms-alarms-*").build();
+                        await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)
+                                .until(() -> jestClient.execute(search).getTotal(), greaterThan(0L));
+                    })
+                    .build();
+            results = scenario.play();
         }
+
+        // Verify the set of alarms at various points in time
+
+        // t=0, no alarms
+        assertThat(results.getAlarms(0), hasSize(0));
+        // t=1, a single problem alarm
+        assertThat(results.getAlarms(1), hasSize(1));
+        assertThat(results.getProblemAlarm(1), hasSeverity(OnmsSeverity.MAJOR));
+        // t=2, a (cleared) problem and a resolution
+        assertThat(results.getAlarms(2), hasSize(2));
+        assertThat(results.getProblemAlarm(2), hasSeverity(OnmsSeverity.CLEARED));
+        assertThat(results.getResolutionAlarm(2), hasSeverity(OnmsSeverity.NORMAL));
+        // t=∞
+        assertThat(results.getAlarmsAtLastKnownTime(), hasSize(0));
+
+        // Now verify the state changes for the particular alarms
+
+        // the problem
+        List<State> problemStates = results.getStateChangesForAlarmWithId(results.getProblemAlarm(1).getId());
+        assertThat(problemStates, hasSize(3)); // warning, cleared, deleted
+        // state 0 at t=1
+        assertThat(problemStates.get(0).getTime(), equalTo(1L));
+        assertThat(problemStates.get(0).getAlarm(), hasSeverity(OnmsSeverity.MAJOR));
+        // state 1 at t=2
+        assertThat(problemStates.get(1).getTime(), equalTo(2L));
+        assertThat(problemStates.get(1).getAlarm(), hasSeverity(OnmsSeverity.CLEARED));
+        assertThat(problemStates.get(1).getAlarm().getCounter(), equalTo(1));
+        // state 2 at t in [5m2ms, 10m]
+        assertThat(problemStates.get(2).getTime(), greaterThanOrEqualTo(2L + TimeUnit.MINUTES.toMillis(5)));
+        assertThat(problemStates.get(2).getTime(), lessThan(TimeUnit.MINUTES.toMillis(10)));
+        assertThat(problemStates.get(2).getAlarm(), nullValue()); // DELETED
+
+        // the resolution
+        List<State> resolutionStates = results.getStateChangesForAlarmWithId(results.getResolutionAlarm(2).getId());
+        assertThat(resolutionStates, hasSize(2)); // cleared, deleted
+        // state 0 at t=2
+        assertThat(resolutionStates.get(0).getTime(), equalTo(2L));
+        assertThat(resolutionStates.get(0).getAlarm(), hasSeverity(OnmsSeverity.NORMAL));
+        // state 1 at t in [5m2ms, 10m]
+        assertThat(resolutionStates.get(1).getTime(), greaterThanOrEqualTo(2L + TimeUnit.MINUTES.toMillis(5)));
+        assertThat(resolutionStates.get(1).getTime(), lessThan(TimeUnit.MINUTES.toMillis(10)));
+        assertThat(resolutionStates.get(1).getAlarm(), nullValue()); // DELETED
     }
 }

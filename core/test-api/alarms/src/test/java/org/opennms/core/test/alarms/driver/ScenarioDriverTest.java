@@ -28,6 +28,9 @@
 
 package org.opennms.core.test.alarms.driver;
 
+import static com.jayway.awaitility.Awaitility.await;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -37,18 +40,17 @@ public class ScenarioDriverTest {
 
     @Test
     public void canDriverSimpleScenario() {
+        final AlarmListener listener = AlarmListener.getInstance();
         final Scenario scenario = Scenario.builder()
                 .withLegacyAlarmBehavior()
                 .withNodeDownEvent(1, 1)
                 .withNodeUpEvent(2, 1)
+                .awaitUntil(() -> await().atMost(30, SECONDS).until(listener::getNumUniqueObserveredAlarmIds, equalTo(2)))
                 .build();
-        final ScenarioResults results = play(scenario);
+        final ScenarioResults results = scenario.play();
         // Simple assertion to validate that we do have some results - this test isn't concerned with what they are though
         assertThat(results, notNullValue());
+        assertThat(listener.getNumUniqueObserveredAlarmIds(), equalTo(2));
     }
 
-    private static ScenarioResults play(Scenario scenario) {
-        final JUnitScenarioDriver driver = new JUnitScenarioDriver();
-        return driver.run(scenario);
-    }
 }

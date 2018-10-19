@@ -31,6 +31,7 @@ package org.opennms.features.es.alarms;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -52,6 +53,7 @@ import org.opennms.netmgt.model.OnmsSeverity;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkException;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkRequest;
 import org.opennms.plugins.elasticsearch.rest.bulk.BulkWrapper;
+import org.opennms.plugins.elasticsearch.rest.bulk.FailedItem;
 import org.opennms.plugins.elasticsearch.rest.index.IndexStrategy;
 import org.opennms.plugins.elasticsearch.rest.template.TemplateInitializer;
 import org.slf4j.Logger;
@@ -68,8 +70,8 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
     private static final Logger LOG = LoggerFactory.getLogger(AlarmsToES.class);
 
     private final JestClient client;
-    private final IndexStrategy indexStrategy;
     private final TemplateInitializer templateInitializer;
+    private IndexStrategy indexStrategy = IndexStrategy.MONTHLY;
     private int bulkRetryCount = 3;
     private int batchSize = 200;
     private final String indexPrefix = "opennms-alarms";
@@ -80,9 +82,8 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
             .build());
     private final AtomicBoolean stopped = new AtomicBoolean(false);
 
-    public AlarmsToES(JestClient client, IndexStrategy indexStrategy, TemplateInitializer templateInitializer) {
+    public AlarmsToES(JestClient client, TemplateInitializer templateInitializer) {
         this.client = Objects.requireNonNull(client);
-        this.indexStrategy = Objects.requireNonNull(indexStrategy);
         this.templateInitializer = Objects.requireNonNull(templateInitializer);
     }
 
@@ -125,11 +126,11 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
                 }
 
                 bulkInsert(documents);
-            } catch (IOException |PersistenceException e) {
-                LOG.error("Persisting one or more documents failed.", e);
             } catch (InterruptedException e) {
                 LOG.info("Interrupted. Stopping.");
                 return;
+            } catch (Exception e) {
+                LOG.error("Persisting one or more documents failed.", e);
             }
         }
     }
@@ -152,7 +153,13 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
             // the bulk request considers retries
             bulkRequest.execute();
         } catch (BulkException ex) {
-            throw new PersistenceException(ex.getMessage(), ex.getBulkResult().getFailedDocuments());
+            final List<FailedItem<AlarmDocumentDTO>> failedItems;
+            if (ex.getBulkResult() != null) {
+                failedItems = ex.getBulkResult().getFailedItems();
+            } else {
+                failedItems = Collections.emptyList();
+            }
+            throw new PersistenceException(ex.getMessage(), failedItems);
         } catch (IOException ex) {
             LOG.error("An error occurred while executing the given request: {}", ex.getMessage(), ex);
             throw ex;
@@ -259,5 +266,9 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
 
     public void setBatchSize(int batchSize) {
         this.batchSize = batchSize;
+    }
+
+    public void setIndexStrategy(IndexStrategy indexStrategy) {
+        this.indexStrategy = indexStrategy;
     }
 }

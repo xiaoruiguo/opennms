@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import org.opennms.netmgt.alarmd.AlarmPersisterImpl;
 import org.opennms.netmgt.events.api.EventConstants;
@@ -45,10 +46,13 @@ public class Scenario {
     
     private final boolean legacyAlarmBehavior;
 
+    private final Runnable awaitUntilRunnable;
+
     public Scenario(ScenarioBuilder builder) {
         this.actions = new ArrayList<>(builder.actions);
         this.actions.sort(Comparator.comparing(Action::getTime));
         this.legacyAlarmBehavior = builder.legacyAlarmBehavior;
+        this.awaitUntilRunnable = builder.awaitUntilRunnable;
     }
 
     public List<Action> getActions() {
@@ -67,6 +71,8 @@ public class Scenario {
         private final List<Action> actions = new ArrayList<>();
         
         private boolean legacyAlarmBehavior = false;
+
+        private Runnable awaitUntilRunnable = () -> {};
 
         public ScenarioBuilder withNodeDownEvent(long time, int nodeId) {
             EventBuilder builder = new EventBuilder(EventConstants.NODE_DOWN_EVENT_UEI, "test");
@@ -131,10 +137,22 @@ public class Scenario {
             return this;
         }
 
+        public ScenarioBuilder awaitUntil(Runnable runnable) {
+            this.awaitUntilRunnable = Objects.requireNonNull(runnable);
+            return this;
+        }
+
         public Scenario build() {
             return new Scenario(this);
         }
-
     }
 
+    public ScenarioResults play() {
+        final JUnitScenarioDriver driver = new JUnitScenarioDriver();
+        return driver.run(this);
+    }
+
+    public void awaitUntilComplete() {
+        awaitUntilRunnable.run();
+    }
 }

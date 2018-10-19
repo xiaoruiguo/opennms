@@ -26,24 +26,43 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.es.alarms;
+package org.opennms.core.test.alarms.driver;
 
-import org.junit.Test;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
-import org.opennms.netmgt.alarmd.driver.JUnitScenarioDriver;
-import org.opennms.netmgt.alarmd.driver.Scenario;
-import org.opennms.netmgt.alarmd.driver.ScenarioResults;
-import org.opennms.netmgt.alarmd.driver.State;
+import org.opennms.netmgt.alarmd.api.AlarmLifecycleListener;
+import org.opennms.netmgt.model.OnmsAlarm;
 
-public class AlarmScenarioIT {
+public class AlarmListener implements AlarmLifecycleListener {
 
-    @Test
-    public void doIt() {
-        Scenario scenario = Scenario.builder()
-                .withLegacyAlarmBehavior()
-                .withNodeDownEvent(1, 1)
-                .withNodeUpEvent(2, 1)
-                .build();
-        ScenarioResults results = play(scenario);
+    private static AlarmListener instance = new AlarmListener();
+
+    private final Set<Integer> allObservedAlarmIds = new LinkedHashSet<>();
+
+    private AlarmListener() {}
+
+    public static AlarmListener getInstance() {
+        return instance;
+    }
+
+    @Override
+    public synchronized void handleAlarmSnapshot(List<OnmsAlarm> alarms) {
+        alarms.forEach(a -> allObservedAlarmIds.add(a.getId()));
+    }
+
+    @Override
+    public synchronized void handleNewOrUpdatedAlarm(OnmsAlarm alarm) {
+        allObservedAlarmIds.add(alarm.getId());
+    }
+
+    @Override
+    public synchronized void handleDeletedAlarm(int alarmId, String reductionKey) {
+        allObservedAlarmIds.add(alarmId);
+    }
+
+    public synchronized Integer getNumUniqueObserveredAlarmIds() {
+        return allObservedAlarmIds.size();
     }
 }

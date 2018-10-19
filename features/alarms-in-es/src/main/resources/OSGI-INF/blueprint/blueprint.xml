@@ -118,8 +118,8 @@
     <!-- The repository -->
     <bean id="alarmsToES" class="org.opennms.features.es.alarms.AlarmsToES" init-method="init" destroy-method="destroy">
         <argument ref="jestClient"/>
-        <argument ref="indexStrategy"/>
         <argument ref="templateInitializer" />
+        <property name="indexStrategy" ref="indexStrategy"/>
         <property name="bulkRetryCount" value="${bulkRetryCount}" />
     </bean>
     <service ref="alarmsToES" interface="org.opennms.netmgt.dao.api.AlarmEntityListener">
