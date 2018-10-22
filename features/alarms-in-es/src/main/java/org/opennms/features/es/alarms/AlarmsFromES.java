@@ -26,53 +26,34 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.es.alarms.dto;
+package org.opennms.features.es.alarms;
 
-import com.google.gson.annotations.SerializedName;
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
-public class EventDocumentDTO {
+import org.opennms.features.es.alarms.dto.AlarmDocumentDTO;
 
-    @SerializedName("uei")
-    private String uei;
+import io.searchbox.client.JestClient;
+import io.searchbox.core.Search;
+import io.searchbox.core.SearchResult;
 
-    @SerializedName("id")
-    private Integer id;
+public class AlarmsFromES {
 
-    @SerializedName("log-message")
-    private String logMessage;
+    private final JestClient client;
 
-    @SerializedName("description")
-    private String description;
-
-    public String getUei() {
-        return uei;
+    public AlarmsFromES(JestClient client) {
+        this.client = Objects.requireNonNull(client);
     }
 
-    public void setUei(String uei) {
-        this.uei = uei;
+    public List<AlarmDocumentDTO> getAllAlarms() throws IOException {
+        final Search search = new Search.Builder("")
+                .addIndex("opennms-alarms-*")
+                .build();
+        final SearchResult result = client.execute(search);
+        final List<SearchResult.Hit<AlarmDocumentDTO, Void>> hits = result.getHits(AlarmDocumentDTO.class);
+        return hits.stream().map(h -> h.source).collect(Collectors.toList());
     }
 
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getLogMessage() {
-        return logMessage;
-    }
-
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
 }

@@ -30,49 +30,27 @@ package org.opennms.features.es.alarms.dto;
 
 import com.google.gson.annotations.SerializedName;
 
-public class EventDocumentDTO {
+public class SeverityStateChangeDTO extends StateChangeDTO {
 
-    @SerializedName("uei")
-    private String uei;
+    @SerializedName("severity-id")
+    private Integer severityId;
 
-    @SerializedName("id")
-    private Integer id;
+    @SerializedName("severity-label")
+    private String severityLabel;
 
-    @SerializedName("log-message")
-    private String logMessage;
-
-    @SerializedName("description")
-    private String description;
-
-    public String getUei() {
-        return uei;
+    public Integer getSeverityId() {
+        return severityId;
     }
 
-    public void setUei(String uei) {
-        this.uei = uei;
+    public void setSeverityId(Integer severityId) {
+        this.severityId = severityId;
     }
 
-    public Integer getId() {
-        return id;
+    public String getSeverityLabel() {
+        return severityLabel;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getLogMessage() {
-        return logMessage;
-    }
-
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
+    public void setSeverityLabel(String severityLabel) {
+        this.severityLabel = severityLabel;
     }
 }

@@ -26,53 +26,41 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.features.es.alarms.dto;
+package org.opennms.core.time;
 
-import com.google.gson.annotations.SerializedName;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
-public class EventDocumentDTO {
+public class PseudoClock {
 
-    @SerializedName("uei")
-    private String uei;
+    private static PseudoClock instance = new PseudoClock();
 
-    @SerializedName("id")
-    private Integer id;
+    private AtomicLong time = new AtomicLong();
 
-    @SerializedName("log-message")
-    private String logMessage;
-
-    @SerializedName("description")
-    private String description;
-
-    public String getUei() {
-        return uei;
+    private PseudoClock() {
+        reset();
     }
 
-    public void setUei(String uei) {
-        this.uei = uei;
+    public static PseudoClock getInstance() {
+        return instance;
     }
 
-    public Integer getId() {
-        return id;
+    public void reset() {
+        time.set(0);
     }
 
-    public void setId(Integer id) {
-        this.id = id;
+    public long getTime() {
+        return time.get();
     }
 
-    public String getLogMessage() {
-        return logMessage;
-    }
-
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
+    /**
+     * Advances the clock time in the specified unit amount.
+     *
+     * @param amount the amount of units to advance in the clock
+     * @param unit the used time unit
+     * @return the current absolute timestamp
+     */
+    public long advanceTime(long amount, TimeUnit unit) {
+        return time.addAndGet(unit.toMillis(amount));
     }
 }

@@ -28,5 +28,64 @@
 
 package org.opennms.features.es.alarms.dto;
 
+import java.util.List;
+
+import com.google.gson.annotations.SerializedName;
+
 public class NodeDocumentDTO {
+
+    @SerializedName("id")
+    private Integer id;
+
+    @SerializedName("label")
+    private String label;
+
+    @SerializedName("foreign-source")
+    private String foreignSource;
+
+    @SerializedName("foreign-id")
+    private String foreignId;
+
+    @SerializedName("categories")
+    private List<String> categories;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
+    }
+
+    public String getForeignSource() {
+        return foreignSource;
+    }
+
+    public void setForeignSource(String foreignSource) {
+        this.foreignSource = foreignSource;
+    }
+
+    public String getForeignId() {
+        return foreignId;
+    }
+
+    public void setForeignId(String foreignId) {
+        this.foreignId = foreignId;
+    }
+
+    public List<String> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(List<String> categories) {
+        this.categories = categories;
+    }
 }

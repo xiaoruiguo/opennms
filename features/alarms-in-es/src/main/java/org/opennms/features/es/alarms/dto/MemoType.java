@@ -28,51 +28,7 @@
 
 package org.opennms.features.es.alarms.dto;
 
-import com.google.gson.annotations.SerializedName;
-
-public class EventDocumentDTO {
-
-    @SerializedName("uei")
-    private String uei;
-
-    @SerializedName("id")
-    private Integer id;
-
-    @SerializedName("log-message")
-    private String logMessage;
-
-    @SerializedName("description")
-    private String description;
-
-    public String getUei() {
-        return uei;
-    }
-
-    public void setUei(String uei) {
-        this.uei = uei;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public String getLogMessage() {
-        return logMessage;
-    }
-
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
+public enum MemoType {
+    STICKY,
+    JOURNAL
 }

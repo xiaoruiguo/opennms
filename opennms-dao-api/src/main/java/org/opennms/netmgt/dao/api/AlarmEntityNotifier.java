@@ -42,7 +42,7 @@ import org.opennms.netmgt.model.OnmsSeverity;
  * an open transaction.
  *
  * The implementation should in turn notify any interested listeners
- * i.e. northbounders, correlation engines, etc... about the state change.
+ * i.e. northbounders, correlation engines, etc... about the state changes.
  *
  * The implementation should be thread safe.
  *
@@ -52,7 +52,7 @@ public interface AlarmEntityNotifier {
 
     void didCreateAlarm(OnmsAlarm alarm);
 
-    void didUpdateAlarmWithReducedEvent(OnmsAlarm alarm);
+    void didUpdateAlarmWithReducedEvent(OnmsAlarm alarm, OnmsAlarm alarmBeforeReduction);
 
     void didAcknowledgeAlarm(OnmsAlarm alarm, String previousAckUser, Date previousAckTime);
 

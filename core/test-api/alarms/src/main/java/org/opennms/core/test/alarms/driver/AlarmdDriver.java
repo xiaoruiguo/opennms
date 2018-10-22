@@ -45,6 +45,7 @@ import org.opennms.core.test.OpenNMSJUnit4ClassRunner;
 import org.opennms.core.test.db.MockDatabase;
 import org.opennms.core.test.db.TemporaryDatabaseAware;
 import org.opennms.core.test.db.annotations.JUnitTemporaryDatabase;
+import org.opennms.core.time.PseudoClock;
 import org.opennms.netmgt.alarmd.AlarmPersisterImpl;
 import org.opennms.netmgt.alarmd.Alarmd;
 import org.opennms.netmgt.alarmd.drools.AlarmService;
@@ -141,6 +142,10 @@ public class AlarmdDriver implements TemporaryDatabaseAware<MockDatabase>, Actio
         node.setId(2);
         m_nodeDao.save(node);
 
+        node = new OnmsNode(m_locationDao.getDefaultLocation(), "node3");
+        node.setId(3);
+        m_nodeDao.save(node);
+
         // Use a pseudo-clock
         m_droolsAlarmContext.setUsePseudoClock(true);
         // Drive the ticks ourselves
@@ -181,6 +186,7 @@ public class AlarmdDriver implements TemporaryDatabaseAware<MockDatabase>, Actio
 
             if (start > 0) {
                 // Tick
+                PseudoClock.getInstance().advanceTime(tickLength, TimeUnit.MILLISECONDS);
                 m_droolsAlarmContext.getClock().advanceTime(tickLength, TimeUnit.MILLISECONDS);
                 m_droolsAlarmContext.tick();
             }
@@ -195,6 +201,7 @@ public class AlarmdDriver implements TemporaryDatabaseAware<MockDatabase>, Actio
                 }
 
                 // Tick
+                PseudoClock.getInstance().advanceTime(tickLength, TimeUnit.MILLISECONDS);
                 m_droolsAlarmContext.getClock().advanceTime(tickLength, TimeUnit.MILLISECONDS);
                 m_droolsAlarmContext.tick();
                 results.addAlarms(now, m_transactionTemplate.execute((t) -> {

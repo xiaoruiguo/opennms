@@ -30,24 +30,13 @@ package org.opennms.features.es.alarms.dto;
 
 import com.google.gson.annotations.SerializedName;
 
-public class AckStateChangeDTO {
-
-    @SerializedName("time")
-    private Long time;
+public class AckStateChangeDTO extends StateChangeDTO {
 
     @SerializedName("ack-user")
     private String ackUser;
 
     @SerializedName("ack-time")
     private Long ackTime;
-
-    public Long getTime() {
-        return time;
-    }
-
-    public void setTime(Long time) {
-        this.time = time;
-    }
 
     public String getAckUser() {
         return ackUser;

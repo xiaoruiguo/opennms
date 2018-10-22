@@ -128,7 +128,7 @@ public class AlarmLifecycleListenerManager implements AlarmEntityListener, Initi
     }
 
     @Override
-    public void onAlarmUpdatedWithReducedEvent(OnmsAlarm alarm) {
+    public void onAlarmUpdatedWithReducedEvent(OnmsAlarm alarm, OnmsAlarm alarmBeforeReduction) {
         onNewOrUpdatedAlarm(alarm);
     }
 

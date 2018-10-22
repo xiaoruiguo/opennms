@@ -30,34 +30,40 @@ package org.opennms.features.es.alarms;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.lessThan;
-import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.IsEqual.equalTo;
+import static org.hamcrest.core.IsNot.not;
+import static org.opennms.core.test.alarms.AlarmMatchers.acknowledged;
 import static org.opennms.core.test.alarms.AlarmMatchers.hasSeverity;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.opennms.core.test.alarms.driver.Scenario;
 import org.opennms.core.test.alarms.driver.ScenarioResults;
-import org.opennms.core.test.alarms.driver.State;
 import org.opennms.core.test.elastic.ElasticSearchRule;
 import org.opennms.core.test.elastic.ElasticSearchServerConfig;
+import org.opennms.core.time.PseudoClock;
+import org.opennms.features.es.alarms.dto.AlarmDocumentDTO;
+import org.opennms.features.es.alarms.views.AlarmDocumentView;
+import org.opennms.features.es.alarms.views.AlarmTableView;
 import org.opennms.netmgt.model.OnmsSeverity;
 import org.opennms.plugins.elasticsearch.rest.RestClientFactory;
 
 import io.searchbox.client.JestClient;
-import io.searchbox.core.Search;
 
 public class AlarmToESIT {
     private static final String HTTP_PORT = "9205";
     private static final String HTTP_TRANSPORT_PORT = "9305";
+
+    private JestClient jestClient;
+    private AlarmsFromES alarmsFromES;
 
     @Rule
     public ElasticSearchRule elasticSearchRule = new ElasticSearchRule(new ElasticSearchServerConfig()
@@ -69,64 +75,167 @@ public class AlarmToESIT {
             .withSetting("transport.tcp.port", HTTP_TRANSPORT_PORT)
     );
 
-    @Test
-    public void canArchiveAlarms() throws IOException {
-        ScenarioResults results = null;
-        final RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT);
-        try (final JestClient jestClient = restClientFactory.createClient()) {
-            Scenario scenario = Scenario.builder()
-                    .withLegacyAlarmBehavior()
-                    .withNodeDownEvent(1, 1)
-                    .withNodeUpEvent(2, 1)
-                    .awaitUntil(() -> {
-                        final Search search = new Search.Builder("").addIndex("opennms-alarms-*").build();
-                        await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)
-                                .until(() -> jestClient.execute(search).getTotal(), greaterThan(0L));
-                    })
-                    .build();
-            results = scenario.play();
+    @Before
+    public void setUp() throws IOException {
+        // The pseudo clock is driven by the alarm test driver, and used
+        // by the ES indexer so that the timestamps line up
+        // Reset the clock to 0 before every test
+        PseudoClock.getInstance().reset();
+
+        RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT);
+        jestClient = restClientFactory.createClient();
+        alarmsFromES = new AlarmsFromES(jestClient);
+        // Initially there should be no documents
+        assertThat(alarmsFromES.getAllAlarms(), hasSize(equalTo(0)));
+    }
+
+    @After
+    public void tearDown() throws IOException {
+        if (jestClient != null) {
+            jestClient.close();
+            jestClient = null;
         }
+    }
+
+    @Test
+    public void canIndexAlarmsInElasticsearch() throws IOException {
+        Scenario scenario = Scenario.builder()
+                .withLegacyAlarmBehavior()
+                .withNodeDownEvent(1, 1)
+                .withAcknowledgmentForNodeDownAlarm(2, 1)
+                .withNodeUpEvent(3, 1)
+                .awaitUntil(waitForNAlarmsInES(2))
+                .build();
+        // Execute the scenario
+        ScenarioResults scenarioResults = scenario.play();
+
+        // Retrieve the alarms as stored in ES
+        final List<AlarmDocumentDTO> alarmDocuments = alarmsFromES.getAllAlarms();
+        assertThat(alarmDocuments, hasSize(equalTo(2)));
+        final AlarmTableView alarmTableView = new AlarmTableView(alarmDocuments);
+
+        // Verify the set of alarms at various points in time
+
+        // t=0, no scenarioResults
+        assertThat(scenarioResults.getAlarms(0), hasSize(0));
+
+        assertThat(alarmTableView.getAlarmsAtTime(0), hasSize(0));
+
+        // t=1, a single problem alarm that is not yet acknowledged
+        assertThat(scenarioResults.getAlarms(1), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(1), hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(scenarioResults.getProblemAlarm(1), not(acknowledged()));
+
+        assertThat(alarmTableView.getAlarmsAtTime(1), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(1), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(alarmTableView.getProblemAlarmAtTime(1), not(ExtAlarmsMatchers.acknowledged()));
+
+        // t=2, a single problem alarm that is acknowledged
+        assertThat(scenarioResults.getAlarms(2), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(2), hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(scenarioResults.getProblemAlarm(2), acknowledged());
+
+        assertThat(alarmTableView.getAlarmsAtTime(2), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(2), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(alarmTableView.getProblemAlarmAtTime(2), ExtAlarmsMatchers.acknowledged());
+
+        // t=3, a (acknowledged & cleared) problem and a resolution
+        assertThat(scenarioResults.getAlarms(3), hasSize(2));
+        assertThat(scenarioResults.getProblemAlarm(3), hasSeverity(OnmsSeverity.CLEARED));
+        assertThat(scenarioResults.getProblemAlarm(3), acknowledged());
+        assertThat(scenarioResults.getResolutionAlarm(3), hasSeverity(OnmsSeverity.NORMAL));
+
+        assertThat(alarmTableView.getAlarmsAtTime(4), hasSize(2));
+        assertThat(alarmTableView.getProblemAlarmAtTime(4), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.CLEARED));
+        assertThat(alarmTableView.getProblemAlarmAtTime(4), ExtAlarmsMatchers.acknowledged());
+        assertThat(alarmTableView.getResolutionAlarmAtTime(4), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.NORMAL));
+
+        // t=∞
+        Long lastKnownTime = scenarioResults.getLastKnownTime();
+        assertThat(scenarioResults.getAlarms(lastKnownTime), hasSize(0));
+
+        assertThat(alarmTableView.getAlarmsAtTime(lastKnownTime), hasSize(0));
+    }
+
+    @Test
+    public void canIndexSituationsInElasticsearch() throws IOException {
+        Scenario scenario = Scenario.builder()
+                .withLegacyAlarmBehavior()
+                // Create some node down alarms
+                .withNodeDownEvent(1, 1)
+                .withNodeDownEvent(2, 2)
+                // Create a situation that contains the node down alarms
+                .withSituationForNodeDownAlarms(3, "situation#1", 1, 2)
+                // Create another another node down alarm
+                .withNodeDownEvent(4, 3)
+                // Add the new nodeDown alarm to the situation
+                .withSituationForNodeDownAlarms(5, "situation#1", 3)
+                // Clear the nodeDown alarms
+                .withNodeUpEvent(6, 1)
+                .withNodeUpEvent(6, 2)
+                .withNodeUpEvent(6, 3)
+                .awaitUntil(waitForNAlarmsInES(7))
+                .build();
+        ScenarioResults scenarioResults = scenario.play();
+
+        // Retrieve the alarms as stored in ES
+        final List<AlarmDocumentDTO> alarmDocuments = alarmsFromES.getAllAlarms();
+        assertThat(alarmDocuments, hasSize(equalTo(7)));
+        final AlarmTableView alarmTableView = new AlarmTableView(alarmDocuments);
 
         // Verify the set of alarms at various points in time
 
         // t=0, no alarms
-        assertThat(results.getAlarms(0), hasSize(0));
+        assertThat(scenarioResults.getAlarms(0), hasSize(0));
+
+        assertThat(alarmTableView.getAlarmsAtTime(0), hasSize(0));
+
         // t=1, a single problem alarm
-        assertThat(results.getAlarms(1), hasSize(1));
-        assertThat(results.getProblemAlarm(1), hasSeverity(OnmsSeverity.MAJOR));
-        // t=2, a (cleared) problem and a resolution
-        assertThat(results.getAlarms(2), hasSize(2));
-        assertThat(results.getProblemAlarm(2), hasSeverity(OnmsSeverity.CLEARED));
-        assertThat(results.getResolutionAlarm(2), hasSeverity(OnmsSeverity.NORMAL));
+        assertThat(scenarioResults.getAlarms(1), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(1), hasSeverity(OnmsSeverity.MAJOR));
+
+        assertThat(alarmTableView.getAlarmsAtTime(1), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(1), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+
+        // t=2, two problem alarms
+        assertThat(scenarioResults.getAlarms(2), hasSize(2));
+
+        assertThat(alarmTableView.getAlarmsAtTime(2), hasSize(2));
+
+        // t=3, two problem alarms + 1 situation
+        assertThat(scenarioResults.getAlarms(3), hasSize(3)); // the situation is also an alarm, so it is counted here
+        assertThat(scenarioResults.getSituations(3), hasSize(1));
+        assertThat(scenarioResults.getSituation(3), hasSeverity(OnmsSeverity.MAJOR));
+
+        assertThat(alarmTableView.getAlarmsAtTime(3), hasSize(3));
+        assertThat(alarmTableView.getSituationsAtTime(3), hasSize(1));
+
+        final AlarmDocumentView situation = alarmTableView.getSituationAtTime(3);
+        assertThat(situation, ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(situation.getReductionKeysForRelatedAlarms(), hasSize(2));
+
+        // t=4, three problem alarms + 1 situation - only 2 of the problems are in the situation
+        assertThat(scenarioResults.getAlarms(4), hasSize(4)); // the situation is also an alarm, so it is counted here
+        assertThat(alarmTableView.getSituationAtTime(3).getReductionKeysForRelatedAlarms(), hasSize(2));
+
+        // t=5, three problem alarms + 1 situation - all 3 alarms are in the situation
+        assertThat(scenarioResults.getAlarms(5), hasSize(4)); // the situation is also an alarm, so it is counted here
+        assertThat(alarmTableView.getSituationAtTime(5).getReductionKeysForRelatedAlarms(), hasSize(3));
+
         // t=∞
-        assertThat(results.getAlarmsAtLastKnownTime(), hasSize(0));
+        Long lastKnownTime = scenarioResults.getLastKnownTime();
+        assertThat(scenarioResults.getAlarms(lastKnownTime), hasSize(0));
+        assertThat(alarmTableView.getAlarmsAtTime(lastKnownTime), hasSize(0));
+    }
 
-        // Now verify the state changes for the particular alarms
-
-        // the problem
-        List<State> problemStates = results.getStateChangesForAlarmWithId(results.getProblemAlarm(1).getId());
-        assertThat(problemStates, hasSize(3)); // warning, cleared, deleted
-        // state 0 at t=1
-        assertThat(problemStates.get(0).getTime(), equalTo(1L));
-        assertThat(problemStates.get(0).getAlarm(), hasSeverity(OnmsSeverity.MAJOR));
-        // state 1 at t=2
-        assertThat(problemStates.get(1).getTime(), equalTo(2L));
-        assertThat(problemStates.get(1).getAlarm(), hasSeverity(OnmsSeverity.CLEARED));
-        assertThat(problemStates.get(1).getAlarm().getCounter(), equalTo(1));
-        // state 2 at t in [5m2ms, 10m]
-        assertThat(problemStates.get(2).getTime(), greaterThanOrEqualTo(2L + TimeUnit.MINUTES.toMillis(5)));
-        assertThat(problemStates.get(2).getTime(), lessThan(TimeUnit.MINUTES.toMillis(10)));
-        assertThat(problemStates.get(2).getAlarm(), nullValue()); // DELETED
-
-        // the resolution
-        List<State> resolutionStates = results.getStateChangesForAlarmWithId(results.getResolutionAlarm(2).getId());
-        assertThat(resolutionStates, hasSize(2)); // cleared, deleted
-        // state 0 at t=2
-        assertThat(resolutionStates.get(0).getTime(), equalTo(2L));
-        assertThat(resolutionStates.get(0).getAlarm(), hasSeverity(OnmsSeverity.NORMAL));
-        // state 1 at t in [5m2ms, 10m]
-        assertThat(resolutionStates.get(1).getTime(), greaterThanOrEqualTo(2L + TimeUnit.MINUTES.toMillis(5)));
-        assertThat(resolutionStates.get(1).getTime(), lessThan(TimeUnit.MINUTES.toMillis(10)));
-        assertThat(resolutionStates.get(1).getAlarm(), nullValue()); // DELETED
+    private Runnable waitForNAlarmsInES(int numAlarms) {
+        return () -> {
+            // Don't tear down until we have the expected number of alarms in ES and they are all marked as deleted.
+            await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)
+                    .until(alarmsFromES::getAllAlarms, hasSize(equalTo(numAlarms)));
+            // All of the alarms are in ES now, wait until they are deleted
+            await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)
+                    .until(alarmsFromES::getAllAlarms, everyItem(ExtAlarmsMatchers.wasDeleted()));
+        };
     }
 }

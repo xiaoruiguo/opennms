@@ -72,7 +72,7 @@ public class NorthbounderManager extends DefaultAlarmEntityListener {
     }
 
     @Override
-    public void onAlarmUpdatedWithReducedEvent(OnmsAlarm alarm) {
+    public void onAlarmUpdatedWithReducedEvent(OnmsAlarm alarm, OnmsAlarm alarmBeforeReduction) {
         forwardAlarmToNbis(alarm);
     }
 

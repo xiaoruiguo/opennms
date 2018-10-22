@@ -30,26 +30,28 @@ package org.opennms.features.es.alarms.dto;
 
 import com.google.gson.annotations.SerializedName;
 
-public class EventDocumentDTO {
-
-    @SerializedName("uei")
-    private String uei;
+public class RelatedAlarmStateChangeDTO extends StateChangeDTO {
 
     @SerializedName("id")
     private Integer id;
 
-    @SerializedName("log-message")
-    private String logMessage;
+    @SerializedName("reduction-key")
+    private String reductionKey;
 
-    @SerializedName("description")
-    private String description;
+    @SerializedName("addition")
+    private boolean addition;
 
-    public String getUei() {
-        return uei;
-    }
+    @SerializedName("removal")
+    private boolean removal;
 
-    public void setUei(String uei) {
-        this.uei = uei;
+    public RelatedAlarmStateChangeDTO() { }
+
+    public RelatedAlarmStateChangeDTO(Long time, Integer id, String reductionKey, boolean isAddition) {
+        super(time);
+        this.id = id;
+        this.reductionKey = reductionKey;
+        this.addition = isAddition;
+        this.removal = !addition;
     }
 
     public Integer getId() {
@@ -60,19 +62,27 @@ public class EventDocumentDTO {
         this.id = id;
     }
 
-    public String getLogMessage() {
-        return logMessage;
+    public String getReductionKey() {
+        return reductionKey;
     }
 
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
+    public void setReductionKey(String reductionKey) {
+        this.reductionKey = reductionKey;
     }
 
-    public String getDescription() {
-        return description;
+    public boolean isAddition() {
+        return addition;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setAddition(boolean addition) {
+        this.addition = addition;
+    }
+
+    public boolean isRemoval() {
+        return removal;
+    }
+
+    public void setRemoval(boolean removal) {
+        this.removal = removal;
     }
 }

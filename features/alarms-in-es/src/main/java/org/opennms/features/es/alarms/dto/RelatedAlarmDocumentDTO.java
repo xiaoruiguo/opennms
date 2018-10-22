@@ -28,5 +28,133 @@
 
 package org.opennms.features.es.alarms.dto;
 
+import com.google.gson.annotations.SerializedName;
+
+/**
+ * The related alarm document contains a subset of the alarm fields.
+ *
+ * The remaining attributes can be retrieved directly from the document representing the related alarm.
+ */
 public class RelatedAlarmDocumentDTO {
+
+    @SerializedName("id")
+    private Integer id;
+
+    @SerializedName("reduction-key")
+    private String reductionKey;
+
+    @SerializedName("first-event-time")
+    private Long firstEventTime;
+
+    @SerializedName("last-event-time")
+    private Long lastEventTime;
+
+    @SerializedName("last-event")
+    private EventDocumentDTO lastEvent;
+
+    @SerializedName("severity-id")
+    private Integer severityId;
+
+    @SerializedName("severity-label")
+    private String severityLabel;
+
+    @SerializedName("ack-time")
+    private Long ackTime;
+
+    @SerializedName("ack-user")
+    private String ackUser;
+
+    @SerializedName("managed-object-instance")
+    private String managedObjectInstance;
+
+    @SerializedName("managed-object-type")
+    private String managedObjectType;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getReductionKey() {
+        return reductionKey;
+    }
+
+    public void setReductionKey(String reductionKey) {
+        this.reductionKey = reductionKey;
+    }
+
+    public Long getFirstEventTime() {
+        return firstEventTime;
+    }
+
+    public void setFirstEventTime(Long firstEventTime) {
+        this.firstEventTime = firstEventTime;
+    }
+
+    public Long getLastEventTime() {
+        return lastEventTime;
+    }
+
+    public void setLastEventTime(Long lastEventTime) {
+        this.lastEventTime = lastEventTime;
+    }
+
+    public EventDocumentDTO getLastEvent() {
+        return lastEvent;
+    }
+
+    public void setLastEvent(EventDocumentDTO lastEvent) {
+        this.lastEvent = lastEvent;
+    }
+
+    public Integer getSeverityId() {
+        return severityId;
+    }
+
+    public void setSeverityId(Integer severityId) {
+        this.severityId = severityId;
+    }
+
+    public String getSeverityLabel() {
+        return severityLabel;
+    }
+
+    public void setSeverityLabel(String severityLabel) {
+        this.severityLabel = severityLabel;
+    }
+
+    public Long getAckTime() {
+        return ackTime;
+    }
+
+    public void setAckTime(Long ackTime) {
+        this.ackTime = ackTime;
+    }
+
+    public String getAckUser() {
+        return ackUser;
+    }
+
+    public void setAckUser(String ackUser) {
+        this.ackUser = ackUser;
+    }
+
+    public String getManagedObjectInstance() {
+        return managedObjectInstance;
+    }
+
+    public void setManagedObjectInstance(String managedObjectInstance) {
+        this.managedObjectInstance = managedObjectInstance;
+    }
+
+    public String getManagedObjectType() {
+        return managedObjectType;
+    }
+
+    public void setManagedObjectType(String managedObjectType) {
+        this.managedObjectType = managedObjectType;
+    }
 }

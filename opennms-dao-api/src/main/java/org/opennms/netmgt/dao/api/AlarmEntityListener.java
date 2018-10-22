@@ -45,7 +45,7 @@ public interface AlarmEntityListener {
 
     void onAlarmCreated(OnmsAlarm alarm);
 
-    void onAlarmUpdatedWithReducedEvent(OnmsAlarm alarm);
+    void onAlarmUpdatedWithReducedEvent(OnmsAlarm alarm, OnmsAlarm alarmBeforeReduction);
 
     void onAlarmAcknowledged(OnmsAlarm alarm, String previousAckUser, Date previousAckTime);
 

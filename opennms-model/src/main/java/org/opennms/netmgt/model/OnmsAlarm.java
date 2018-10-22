@@ -33,6 +33,7 @@ import java.net.InetAddress;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -230,6 +231,60 @@ public class OnmsAlarm implements Acknowledgeable, Serializable {
         this.m_severity = OnmsSeverity.get(severity);
         this.m_firstEventTime = firsteventtime;
         this.m_lastEvent = event;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param other alarm to copy
+     */
+    public OnmsAlarm(OnmsAlarm other) {
+        // TODO: Use setters and getters
+        m_id = other.m_id;
+        m_uei = other.m_uei;
+        m_distPoller = other.m_distPoller;
+        m_node = other.m_node;
+        m_ipAddr = other.m_ipAddr;
+        m_serviceType = other.m_serviceType;
+        m_reductionKey = other.m_reductionKey;
+        m_alarmType = other.m_alarmType;
+        m_ifIndex = other.m_ifIndex;
+        m_counter = other.m_counter;
+        m_severity = other.m_severity;
+        m_firstEventTime = other.m_firstEventTime;
+        m_lastEventTime = other.m_lastEventTime;
+        m_firstAutomationTime = other.m_firstAutomationTime;
+        m_lastAutomationTime = other.m_lastAutomationTime;
+        m_description = other.m_description;
+        m_logMsg = other.m_logMsg;
+        m_operInstruct = other.m_operInstruct;
+        m_tTicketId = other.m_tTicketId;
+        m_tTicketState = other.m_tTicketState;
+        m_mouseOverText = other.m_mouseOverText;
+        m_suppressedUntil = other.m_suppressedUntil;
+        m_suppressedUser = other.m_suppressedUser;
+        m_suppressedTime = other.m_suppressedTime;
+        m_alarmAckUser = other.m_alarmAckUser;
+        m_alarmAckTime = other.m_alarmAckTime;
+        m_clearKey = other.m_clearKey;
+        m_lastEvent = other.m_lastEvent;
+        m_managedObjectInstance = other.m_managedObjectInstance;
+        m_managedObjectType = other.m_managedObjectType;
+        m_applicationDN = other.m_applicationDN;
+        m_ossPrimaryKey = other.m_ossPrimaryKey;
+        m_x733AlarmType = other.m_x733AlarmType;
+        m_qosAlarmState = other.m_qosAlarmState;
+        m_x733ProbableCause = other.m_x733ProbableCause;
+        if (other.m_details != null) {
+            m_details = new LinkedHashMap<>(other.m_details);
+        } else {
+            m_details = null;
+        }
+        m_stickyMemo = other.m_stickyMemo;
+        m_reductionKeyMemo = other.m_reductionKeyMemo;
+        for (OnmsAlarm relatedAlarm : other.getRelatedAlarms()) {
+            addRelatedAlarm(new OnmsAlarm(relatedAlarm));
+        }
     }
 
     /**

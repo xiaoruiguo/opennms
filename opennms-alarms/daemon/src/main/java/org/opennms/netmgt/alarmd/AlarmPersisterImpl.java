@@ -28,11 +28,13 @@
 
 package org.opennms.netmgt.alarmd;
 
+import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.stream.Collectors;
 
+import org.apache.commons.beanutils.BeanUtils;
 import org.opennms.netmgt.alarmd.api.AlarmPersisterExtension;
 import org.opennms.netmgt.dao.api.AlarmDao;
 import org.opennms.netmgt.dao.api.AlarmEntityNotifier;
@@ -175,6 +178,10 @@ public class AlarmPersisterImpl implements AlarmPersister {
             m_alarmEntityNotifier.didCreateAlarm(alarm);
         } else {
             LOG.debug("addOrReduceEventAsAlarm: reductionKey:{} found, reducing event to existing alarm: {}", reductionKey, alarm.getIpAddr());
+            // We don't know which properties on the alarm will be altered by the extensions, so we clone
+            // the object before making any changes. We then pass the original alarm to the AlarmEntityNotifier
+            // so that any listeners can then react to the changes made.
+            final OnmsAlarm alarmBeforeReduction = new OnmsAlarm(alarm);
             reduceEvent(persistedEvent, alarm, event);
 
             // Trigger extensions, allowing them to mangle the alarm
@@ -192,7 +199,7 @@ public class AlarmPersisterImpl implements AlarmPersister {
                 m_eventDao.deletePreviousEventsForAlarm(alarm.getId(), persistedEvent);
             }
 
-            m_alarmEntityNotifier.didUpdateAlarmWithReducedEvent(alarm);
+            m_alarmEntityNotifier.didUpdateAlarmWithReducedEvent(alarm, alarmBeforeReduction);
         }
         return alarm;
     }

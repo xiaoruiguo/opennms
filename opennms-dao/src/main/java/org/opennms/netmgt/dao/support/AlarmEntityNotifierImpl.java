@@ -56,8 +56,8 @@ public class AlarmEntityNotifierImpl implements AlarmEntityNotifier {
     }
 
     @Override
-    public void didUpdateAlarmWithReducedEvent(OnmsAlarm alarm) {
-        forEachListener(l -> l.onAlarmUpdatedWithReducedEvent(alarm));
+    public void didUpdateAlarmWithReducedEvent(OnmsAlarm alarm, OnmsAlarm alarmBeforeReduction) {
+        forEachListener(l -> l.onAlarmUpdatedWithReducedEvent(alarm, alarmBeforeReduction));
     }
 
     @Override

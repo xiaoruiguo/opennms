@@ -29,6 +29,7 @@
 package org.opennms.features.es.alarms.dto;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -47,6 +48,9 @@ public class AlarmDocumentDTO {
 
     @SerializedName("@update-time")
     private Long updateTime;
+
+    @SerializedName("@deleted-time")
+    private Long deletedTime;
 
     @SerializedName("@version")
     private Integer version = DOCUMENT_VERSION;
@@ -157,18 +161,68 @@ public class AlarmDocumentDTO {
     private MemoDocumentDTO journalMemo;
 
     @SerializedName("related-alarms")
-    private RelatedAlarmDocumentDTO relatedAlarms;
+    private List<RelatedAlarmDocumentDTO> relatedAlarms;
+
+    @SerializedName("situation")
+    private Boolean situation;
+
+    @SerializedName("archived")
+    private Boolean archived;
+
+    @SerializedName("archived-time")
+    private Long archivedTime;
 
     // State changes
 
     @SerializedName("ack-state-changes")
     private List<AckStateChangeDTO> ackStateChanges;
 
+    @SerializedName("severity-state-changes")
+    private List<SeverityStateChangeDTO> severityStateChanges;
+
+    @SerializedName("related-alarm-state-changes")
+    private List<RelatedAlarmStateChangeDTO> relatedAlarmStateChanges;
+
+    @SerializedName("memo-state-changes")
+    private List<MemoStateChangeDTO> memoStateChanges;
+
     public void addAckStateChange(AckStateChangeDTO ackStateChange) {
         if (ackStateChanges == null) {
-            ackStateChanges = new ArrayList<>();
+            ackStateChanges = new LinkedList<>();
         }
         ackStateChanges.add(ackStateChange);
+    }
+
+    public void addSeverityStateChange(SeverityStateChangeDTO severityStateChange) {
+        if (severityStateChanges == null) {
+            severityStateChanges = new LinkedList<>();
+        }
+        severityStateChanges.add(severityStateChange);
+    }
+
+    public boolean isSituation() {
+        return situation != null && situation;
+    }
+
+    public void addRelatedAlarm(RelatedAlarmDocumentDTO relatedAlarm) {
+        if (relatedAlarms == null) {
+            relatedAlarms = new LinkedList<>();
+        }
+        relatedAlarms.add(relatedAlarm);
+    }
+
+    public void addRelatedAlarmStateChange(RelatedAlarmStateChangeDTO relatedAlarmStateChange) {
+        if (relatedAlarmStateChanges == null) {
+            relatedAlarmStateChanges = new LinkedList<>();
+        }
+        relatedAlarmStateChanges.add(relatedAlarmStateChange);
+    }
+
+    public void addMemoStateChange(MemoStateChangeDTO memoStateChange) {
+        if (memoStateChanges == null) {
+            memoStateChanges = new LinkedList<>();
+        }
+        memoStateChanges.add(memoStateChange);
     }
 
     // Generated getters/setters
@@ -493,12 +547,67 @@ public class AlarmDocumentDTO {
         this.journalMemo = journalMemo;
     }
 
-    public RelatedAlarmDocumentDTO getRelatedAlarms() {
+    public List<RelatedAlarmDocumentDTO> getRelatedAlarms() {
         return relatedAlarms;
     }
 
-    public void setRelatedAlarms(RelatedAlarmDocumentDTO relatedAlarms) {
+    public void setRelatedAlarms(List<RelatedAlarmDocumentDTO> relatedAlarms) {
         this.relatedAlarms = relatedAlarms;
     }
 
+    public Long getDeletedTime() {
+        return deletedTime;
+    }
+
+    public void setDeletedTime(Long deletedTime) {
+        this.deletedTime = deletedTime;
+    }
+
+    public List<SeverityStateChangeDTO> getSeverityStateChanges() {
+        return severityStateChanges;
+    }
+
+    public void setSeverityStateChanges(List<SeverityStateChangeDTO> severityStateChanges) {
+        this.severityStateChanges = severityStateChanges;
+    }
+
+    public Boolean getSituation() {
+        return situation;
+    }
+
+    public void setSituation(Boolean situation) {
+        this.situation = situation;
+    }
+
+    public List<RelatedAlarmStateChangeDTO> getRelatedAlarmStateChanges() {
+        return relatedAlarmStateChanges;
+    }
+
+    public void setRelatedAlarmStateChanges(List<RelatedAlarmStateChangeDTO> relatedAlarmStateChanges) {
+        this.relatedAlarmStateChanges = relatedAlarmStateChanges;
+    }
+
+    public Boolean getArchived() {
+        return archived;
+    }
+
+    public void setArchived(Boolean archived) {
+        this.archived = archived;
+    }
+
+    public Long getArchivedTime() {
+        return archivedTime;
+    }
+
+    public void setArchivedTime(Long archivedTime) {
+        this.archivedTime = archivedTime;
+    }
+
+    public List<MemoStateChangeDTO> getMemoStateChanges() {
+        return memoStateChanges;
+    }
+
+    public void setMemoStateChanges(List<MemoStateChangeDTO> memoStateChanges) {
+        this.memoStateChanges = memoStateChanges;
+    }
 }

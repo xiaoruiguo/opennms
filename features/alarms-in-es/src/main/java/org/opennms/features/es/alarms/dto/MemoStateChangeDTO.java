@@ -30,49 +30,60 @@ package org.opennms.features.es.alarms.dto;
 
 import com.google.gson.annotations.SerializedName;
 
-public class EventDocumentDTO {
+public class MemoStateChangeDTO extends StateChangeDTO {
 
-    @SerializedName("uei")
-    private String uei;
+    @SerializedName("type")
+    private MemoType type;
 
-    @SerializedName("id")
-    private Integer id;
+    @SerializedName("body")
+    private String body;
 
-    @SerializedName("log-message")
-    private String logMessage;
+    @SerializedName("author")
+    private String author;
 
-    @SerializedName("description")
-    private String description;
+    @SerializedName("update-time")
+    private Long updateTime;
 
-    public String getUei() {
-        return uei;
+    @SerializedName("deleted")
+    private Boolean deleted;
+
+    public String getBody() {
+        return body;
     }
 
-    public void setUei(String uei) {
-        this.uei = uei;
+    public void setBody(String body) {
+        this.body = body;
     }
 
-    public Integer getId() {
-        return id;
+    public String getAuthor() {
+        return author;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
+    public void setAuthor(String author) {
+        this.author = author;
     }
 
-    public String getLogMessage() {
-        return logMessage;
+    public Long getUpdateTime() {
+        return updateTime;
     }
 
-    public void setLogMessage(String logMessage) {
-        this.logMessage = logMessage;
+    public void setUpdateTime(Long updateTime) {
+        this.updateTime = updateTime;
     }
 
-    public String getDescription() {
-        return description;
+    public Boolean getDeleted() {
+        return deleted;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setDeleted(Boolean deleted) {
+        this.deleted = deleted;
+    }
+
+    public MemoType getType() {
+        return type;
+    }
+
+    public void setType(MemoType type) {
+        this.type = type;
     }
 }
