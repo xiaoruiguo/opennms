@@ -26,27 +26,28 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.alarmd.drools;
+package org.opennms.features.es.alarms;
 
-import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.opennms.netmgt.model.OnmsAlarm;
-import org.opennms.netmgt.model.OnmsSeverity;
+import com.google.gson.annotations.SerializedName;
 
-public interface AlarmService {
+public class ScriptedUpsertDocument {
 
-    void clearAlarm(OnmsAlarm alarm, Date clearTime);
+    @SerializedName("script")
+    private ScriptDocument script;
 
-    void deleteAlarm(OnmsAlarm alarm);
+    @SerializedName("scripted_upsert")
+    private Boolean scriptedUpsert = true;
 
-    void unclearAlarm(OnmsAlarm alarm, Date now);
+    @SerializedName("upsert")
+    private Map<String,Object> upsert = new HashMap<>();
 
-    void escalateAlarm(OnmsAlarm alarm, Date now);
+    public ScriptedUpsertDocument() { }
 
-    void acknowledgeAlarm(OnmsAlarm alarm, Date now);
-
-    void unacknowledgeAlarm(OnmsAlarm alarm, Date now);
-
-    void setSeverity(OnmsAlarm alarm, OnmsSeverity severity, Date now);
+    public ScriptedUpsertDocument(ScriptDocument script) {
+        this.script = script;
+    }
 
 }

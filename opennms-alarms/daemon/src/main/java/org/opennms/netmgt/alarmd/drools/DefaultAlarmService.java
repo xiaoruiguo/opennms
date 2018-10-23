@@ -129,6 +129,22 @@ public class DefaultAlarmService implements AlarmService {
     }
 
     @Override
+    public void unacknowledgeAlarm(OnmsAlarm alarm, Date now) {
+        LOG.info("Unacknowledging alarm with id: {}", alarm.getId());
+        final OnmsAlarm alarmInTrans = alarmDao.get(alarm.getId());
+        if (alarmInTrans == null) {
+            LOG.warn("Alarm disappeared: {}. Skipping ack.", alarm);
+            return;
+        }
+        final String previousAckUser = alarmInTrans.getAlarmAckUser();
+        final Date previousAckTime = alarmInTrans.getAlarmAckTime();
+        alarmInTrans.setAlarmAckUser(null);
+        alarmInTrans.setAlarmAckTime(null);
+        alarmDao.update(alarmInTrans);
+        alarmEntityNotifier.didUnacknowledgeAlarm(alarmInTrans, previousAckUser, previousAckTime);
+    }
+
+    @Override
     @Transactional
     public void setSeverity(OnmsAlarm alarm, OnmsSeverity severity, Date now) {
         LOG.info("Updating severity on alarm with id: {}", alarm.getId());

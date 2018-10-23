@@ -268,6 +268,19 @@ public class AlarmdDriver implements TemporaryDatabaseAware<MockDatabase>, Actio
     }
 
     @Override
+    public void unacknowledgeAlarm(String ackUser, Date ackTime, Function<OnmsAlarm, Boolean> filter) {
+        m_transactionTemplate.execute((t) -> {
+            final List<OnmsAlarm> alarms = m_alarmDao.findAll().stream()
+                    .filter(filter::apply)
+                    .collect(Collectors.toList());
+            alarms.forEach(a -> {
+                m_alarmService.unacknowledgeAlarm(a, ackTime);
+            });
+            return null;
+        });
+    }
+
+    @Override
     public void setScenario(Scenario scenario) {
         this.scenario = scenario;
     }

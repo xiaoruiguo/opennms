@@ -45,10 +45,6 @@ import io.searchbox.core.Ping;
 
 /**
  * Verifies the connection to ElasticSearch.
- * The health check may be located in an odd place for now.
- * The reason for this is, that multiple Modules create their own clients.
- * In order to not configure the client for the health check module as well, this healthcheck is
- * only validating if ElasticSearch from the view of the flows/elastic bundle is working.
  *
  * @author mvrueden
  */
@@ -62,7 +58,7 @@ public class ElasticHealthCheck implements HealthCheck {
 
     @Override
     public String getDescription() {
-        return "Connecting to ElasticSearch ReST API (Flows)";
+        return "Connecting to ElasticSearch ReST API (Alarms)";
     }
 
     @Override

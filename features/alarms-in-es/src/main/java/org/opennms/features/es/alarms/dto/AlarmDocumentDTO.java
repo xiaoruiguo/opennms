@@ -145,7 +145,7 @@ public class AlarmDocumentDTO {
     @SerializedName("x733-alarm-type")
     private String x733AlarmType;;
 
-    @SerializedName("qoa-alarm-state")
+    @SerializedName("qos-alarm-state")
     private String qosAlarmState;
 
     @SerializedName("x733-probable-cause")
@@ -192,43 +192,35 @@ public class AlarmDocumentDTO {
     @SerializedName("memo-state-changes")
     private List<MemoStateChangeDTO> memoStateChanges;
 
+    public boolean hasStateChanges() {
+        return ackStateChanges != null && ackStateChanges.size() > 0
+                || severityStateChanges != null && severityStateChanges.size() > 0
+                || relatedAlarmStateChanges != null && relatedAlarmStateChanges.size() > 0
+                || memoStateChanges != null && memoStateChanges.size() > 0;
+    }
+
     public void addAckStateChange(AckStateChangeDTO ackStateChange) {
-        if (ackStateChanges == null) {
-            ackStateChanges = new LinkedList<>();
-        }
         ackStateChanges.add(ackStateChange);
     }
 
     public void addSeverityStateChange(SeverityStateChangeDTO severityStateChange) {
-        if (severityStateChanges == null) {
-            severityStateChanges = new LinkedList<>();
-        }
         severityStateChanges.add(severityStateChange);
     }
 
-    public boolean isSituation() {
-        return situation != null && situation;
-    }
-
     public void addRelatedAlarm(RelatedAlarmDocumentDTO relatedAlarm) {
-        if (relatedAlarms == null) {
-            relatedAlarms = new LinkedList<>();
-        }
         relatedAlarms.add(relatedAlarm);
     }
 
     public void addRelatedAlarmStateChange(RelatedAlarmStateChangeDTO relatedAlarmStateChange) {
-        if (relatedAlarmStateChanges == null) {
-            relatedAlarmStateChanges = new LinkedList<>();
-        }
         relatedAlarmStateChanges.add(relatedAlarmStateChange);
     }
 
     public void addMemoStateChange(MemoStateChangeDTO memoStateChange) {
-        if (memoStateChanges == null) {
-            memoStateChanges = new LinkedList<>();
-        }
         memoStateChanges.add(memoStateChange);
+    }
+
+    public boolean isSituation() {
+        return situation != null && situation;
     }
 
     // Generated getters/setters

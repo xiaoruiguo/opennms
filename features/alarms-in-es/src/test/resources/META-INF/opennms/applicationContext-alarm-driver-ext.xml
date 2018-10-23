@@ -20,7 +20,10 @@
         <constructor-arg ref="jestClient"/>
     </bean>
 
+    <bean id="metricRegistry" class="com.codahale.metrics.MetricRegistry"/>
+
     <bean id="alarmsToES" class="org.opennms.features.es.alarms.AlarmsToES" init-method="init" destroy-method="destroy">
+        <constructor-arg ref="metricRegistry"/>
         <constructor-arg ref="jestClient"/>
         <constructor-arg ref="templateInitializer"/>
         <property name="usePseudoClock" value="true"/>

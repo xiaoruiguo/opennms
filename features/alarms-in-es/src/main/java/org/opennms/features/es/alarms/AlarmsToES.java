@@ -37,15 +37,20 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import org.opennms.core.cache.Cache;
+import org.opennms.core.cache.CacheBuilder;
+import org.opennms.core.cache.CacheConfig;
 import org.opennms.core.time.PseudoClock;
 import org.opennms.features.es.alarms.dto.AckStateChangeDTO;
 import org.opennms.features.es.alarms.dto.AlarmDocumentDTO;
@@ -74,19 +79,32 @@ import org.opennms.plugins.elasticsearch.rest.template.TemplateInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
+import com.google.common.cache.CacheLoader;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.gson.Gson;
 
 import io.searchbox.client.JestClient;
 import io.searchbox.core.Bulk;
 import io.searchbox.core.Update;
 
 /**
+ *TODO:
+ * 1) Add support for ad-hoc and periodic synchronizatio - updates will be missed
+ *
  * TODO: Add periodic synchronization.
+ *
+ *
+ *
  */
 public class AlarmsToES implements AlarmEntityListener, Runnable  {
 
     private static final Logger LOG = LoggerFactory.getLogger(AlarmsToES.class);
+    private static final Gson gson = new Gson();
 
     private final JestClient client;
     private final TemplateInitializer templateInitializer;
@@ -102,9 +120,29 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
             .build());
     private final AtomicBoolean stopped = new AtomicBoolean(false);
 
-    public AlarmsToES(JestClient client, TemplateInitializer templateInitializer) {
+    private final Cache<Integer, Optional<NodeDocumentDTO>> nodeInfoCache;
+    private final Histogram bulkInsertSizeHistogram;
+    private final Timer bulkInsertTimer;
+
+    public AlarmsToES(MetricRegistry metrics, JestClient client, TemplateInitializer templateInitializer) {
+        this(metrics, client, templateInitializer, new CacheConfig("nodes-for-alarms-in-es"));
+    }
+
+    public AlarmsToES(MetricRegistry metrics, JestClient client, TemplateInitializer templateInitializer, CacheConfig nodeCacheConfig) {
         this.client = Objects.requireNonNull(client);
         this.templateInitializer = Objects.requireNonNull(templateInitializer);
+        this.nodeInfoCache = new CacheBuilder<>()
+                .withConfig(nodeCacheConfig)
+                .withCacheLoader(new CacheLoader<Integer, Optional<NodeDocumentDTO>>() {
+                    @Override
+                    public Optional<NodeDocumentDTO> load(Integer nodeId) {
+                        return Optional.empty();
+                    }
+                }).build();
+
+
+        bulkInsertSizeHistogram = metrics.histogram("bulk-insert-size");
+        bulkInsertTimer = metrics.timer("bulk-insert-timer");
     }
 
     public void init() {
@@ -147,7 +185,10 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
                     msToWait -= System.currentTimeMillis() - timeBeforePoll;
                 }
 
-                bulkInsert(documents);
+                try(final Timer.Context ctx = bulkInsertTimer.time()) {
+                    bulkInsert(documents);
+                    bulkInsertSizeHistogram.update(documents.size());
+                }
             } catch (InterruptedException e) {
                 LOG.info("Interrupted. Stopping.");
                 return;
@@ -161,12 +202,70 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
         final BulkRequest<AlarmDocumentDTO> bulkRequest = new BulkRequest<>(client, alarmDocuments, (documents) -> {
             final Bulk.Builder bulkBuilder = new Bulk.Builder();
             for (AlarmDocumentDTO alarmDocument : documents) {
-                final String index = indexStrategy.getIndex(indexPrefix, Instant.ofEpochMilli(alarmDocument.getLastEventTime()));
-                final Update.Builder updateBuilder = new Update.Builder(new UpsertDocument<>(alarmDocument))
+                final String index = indexStrategy.getIndex(indexPrefix, Instant.ofEpochMilli(alarmDocument.getFirstEventTime()));
+                final String id = Integer.toString(alarmDocument.getId());
+
+
+                final AlarmDocumentDTO stateChangeDTO;
+                if (alarmDocument.hasStateChanges()) {
+                    // Move the state changes to a separate document
+                    stateChangeDTO = new AlarmDocumentDTO();
+                    stateChangeDTO.setRelatedAlarmStateChanges(alarmDocument.getRelatedAlarmStateChanges());
+                    if(stateChangeDTO.getRelatedAlarmStateChanges() == null) {
+                        stateChangeDTO.setRelatedAlarmStateChanges(Collections.emptyList());
+                    }
+                    stateChangeDTO.setMemoStateChanges(alarmDocument.getMemoStateChanges());
+                    if(stateChangeDTO.getMemoStateChanges() == null) {
+                        stateChangeDTO.setMemoStateChanges(Collections.emptyList());
+                    }
+                    stateChangeDTO.setSeverityStateChanges(alarmDocument.getSeverityStateChanges());
+                    if(stateChangeDTO.getSeverityStateChanges() == null) {
+                        stateChangeDTO.setSeverityStateChanges(Collections.emptyList());
+                    }
+                    stateChangeDTO.setAckStateChanges(alarmDocument.getAckStateChanges());
+                    if(stateChangeDTO.getAckStateChanges() == null) {
+                        stateChangeDTO.setAckStateChanges(Collections.emptyList());
+                    }
+                } else {
+                    stateChangeDTO = null;
+                }
+
+                alarmDocument.setRelatedAlarmStateChanges(null);
+                alarmDocument.setMemoStateChanges(null);
+                alarmDocument.setSeverityStateChanges(null);
+                alarmDocument.setAckStateChanges(null);
+
+                // Build the upsert
+                final UpsertDocument<?> upsert = new UpsertDocument<>(alarmDocument);
+                final Update.Builder updateBuilder = new Update.Builder(upsert)
                         .index(index)
                         .id(Integer.toString(alarmDocument.getId()))
                         .type(AlarmDocumentDTO.TYPE);
+                if (LOG.isWarnEnabled()) {
+                    LOG.warn("Adding upsert action on index: {} with type: {}, ID: {} and payload: {}",
+                            index, AlarmDocumentDTO.TYPE, id, gson.toJson(upsert));
+                }
                 bulkBuilder.addAction(updateBuilder.build());
+
+                // Build the scripted upsert - for appending to the state change arrays
+                if (stateChangeDTO != null) {
+                    final ScriptDocument script = new ScriptDocument();
+                    script.setSource("ctx._source['ack-state-changes'].add(params['ack-state-changes']);"
+                                    + "ctx._source['memo-state-changes'].add(params['memo-state-changes']);"
+                                    + "ctx._source['severity-state-changes'].add(params['severity-state-changes']);"
+                                    + "ctx._source['related-alarm-state-changes'].add(params['related-alarm-state-changes']);");
+                    script.setParameters(stateChangeDTO);
+                    final ScriptedUpsertDocument scriptedUpsert = new ScriptedUpsertDocument(script);
+                    final Update.Builder scriptedUpdateBuilder = new Update.Builder(scriptedUpsert)
+                            .index(index)
+                            .id(Integer.toString(alarmDocument.getId()))
+                            .type(AlarmDocumentDTO.TYPE);
+                    if (LOG.isWarnEnabled()) {
+                        LOG.warn("Adding scripted upsert action on index: {} with type: {}, ID: {} and payload: {}",
+                                index, AlarmDocumentDTO.TYPE, id, gson.toJson(scriptedUpsert));
+                    }
+                    bulkBuilder.addAction(scriptedUpdateBuilder.build());
+                }
             }
             return new BulkWrapper(bulkBuilder);
         }, bulkRetryCount);
@@ -207,9 +306,23 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
         document.setSeverityId(alarm.getSeverityId());
         document.setSeverityLabel(alarm.getSeverityLabel());
         document.setArchived(alarm.isArchived());
-        document.setNode(toNode(alarm.getNode()));
         document.setManagedObjectType(alarm.getManagedObjectType());
         document.setManagedObjectInstance(alarm.getManagedObjectInstance());
+
+        // Build and set the node document - cache these
+        if (alarm.getNodeId() != null) {
+            final Optional<NodeDocumentDTO> cachedNodeDoc = nodeInfoCache.getIfCached(alarm.getNodeId());
+            if (cachedNodeDoc != null && cachedNodeDoc.isPresent()) {
+                document.setNode(cachedNodeDoc.get());
+            } else {
+                // We build the document here, rather than doing it in the call to the cache loader
+                // since we have complete access to the node in this context, and don't want to overload the
+                // cache key
+                final NodeDocumentDTO nodeDoc = toNode(alarm.getNode());
+                nodeInfoCache.put(alarm.getNodeId(), Optional.of(nodeDoc));
+                document.setNode(nodeDoc);
+            }
+        }
 
         // Memos
         document.setStickyMemo(toMemo(alarm.getStickyMemo()));

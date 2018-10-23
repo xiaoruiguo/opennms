@@ -63,9 +63,13 @@ public class DefaultBulkResult<T> implements BulkResultWrapper {
             final BulkResult.BulkResultItem bulkResultItem = rawResult.getItems().get(i);
             if (bulkResultItem.error != null && !bulkResultItem.error.isEmpty()) {
                 final Exception cause = BulkUtils.convertToException(bulkResultItem.error);
-                final T failedObject = documents.get(i);
-                final FailedItem failedItem = new FailedItem(i, failedObject, cause);
-                failedItems.add(failedItem);
+                try {
+                    final T failedObject = documents.get(i);
+                    final FailedItem failedItem = new FailedItem(i, failedObject, cause);
+                    failedItems.add(failedItem);
+                } catch (IndexOutOfBoundsException e) {
+                    // pass
+                }
             }
         }
         return failedItems;

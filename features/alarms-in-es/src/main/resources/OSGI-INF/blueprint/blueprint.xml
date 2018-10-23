@@ -56,17 +56,23 @@
         <argument ref="metricRegistry"/>
     </bean>
     <bean id="metricRegistryDomainedJmxReporterBuilder" factory-ref="metricRegistryJmxReporterBuilder" factory-method="inDomain">
-        <argument value="org.opennms.netmgt.alarmsines"/>
+        <argument value="org.opennms.features.es.alarms"/>
     </bean>
     <bean id="metricRegistryJmxReporter"
           factory-ref="metricRegistryDomainedJmxReporterBuilder"
           factory-method="build"
           init-method="start"
           destroy-method="stop" />
+    <service interface="com.codahale.metrics.MetricSet" ref="metricRegistry" >
+        <service-properties>
+            <entry key="name" value="AlarmsInES"/>
+            <entry key="description" value="Alarms in Elasticsearch"/>
+        </service-properties>
+    </service>
 
     <!-- Configure node cache -->
     <bean id="nodeCacheConfig" class="org.opennms.core.cache.CacheConfig">
-        <argument value="nodes"/>
+        <argument value="nodes-for-alarms-in-es"/>
         <property name="metricRegistry" ref="metricRegistry" />
         <property name="enabled" value="${nodeCache.enabled}" />
         <property name="maximumSize" value="${nodeCache.maximumSize}" />
@@ -117,8 +123,10 @@
 
     <!-- The repository -->
     <bean id="alarmsToES" class="org.opennms.features.es.alarms.AlarmsToES" init-method="init" destroy-method="destroy">
+        <argument ref="metricRegistry"/>
         <argument ref="jestClient"/>
         <argument ref="templateInitializer" />
+        <argument ref="nodeCacheConfig" />
         <property name="indexStrategy" ref="indexStrategy"/>
         <property name="bulkRetryCount" value="${bulkRetryCount}" />
     </bean>

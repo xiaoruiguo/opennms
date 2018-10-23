@@ -57,4 +57,5 @@ public class UpsertDocument<T> {
     public void setDocumentAsUpsert(Boolean documentAsUpsert) {
         this.documentAsUpsert = documentAsUpsert;
     }
+
 }

@@ -26,27 +26,30 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.alarmd.drools;
+package org.opennms.core.test.alarms.driver;
 
 import java.util.Date;
+import java.util.Objects;
 
-import org.opennms.netmgt.model.OnmsAlarm;
-import org.opennms.netmgt.model.OnmsSeverity;
+public class UnAcknowledgeAlarmAction implements Action {
+    private final String ackUser;
+    private final Date ackTime;
+    private final String reductionKey;
 
-public interface AlarmService {
 
-    void clearAlarm(OnmsAlarm alarm, Date clearTime);
+    public UnAcknowledgeAlarmAction(String ackUser, Date ackTime, String reductionKey) {
+        this.ackUser = Objects.requireNonNull(ackUser);
+        this.ackTime = Objects.requireNonNull(ackTime);
+        this.reductionKey = Objects.requireNonNull(reductionKey);
+    }
 
-    void deleteAlarm(OnmsAlarm alarm);
+    @Override
+    public Date getTime() {
+        return ackTime;
+    }
 
-    void unclearAlarm(OnmsAlarm alarm, Date now);
-
-    void escalateAlarm(OnmsAlarm alarm, Date now);
-
-    void acknowledgeAlarm(OnmsAlarm alarm, Date now);
-
-    void unacknowledgeAlarm(OnmsAlarm alarm, Date now);
-
-    void setSeverity(OnmsAlarm alarm, OnmsSeverity severity, Date now);
-
+    @Override
+    public void visit(ActionVisitor visitor) {
+        visitor.unacknowledgeAlarm(ackUser, ackTime, (a) -> Objects.equals(reductionKey, a.getReductionKey()));
+    }
 }

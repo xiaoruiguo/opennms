@@ -56,6 +56,8 @@ import org.opennms.features.es.alarms.views.AlarmTableView;
 import org.opennms.netmgt.model.OnmsSeverity;
 import org.opennms.plugins.elasticsearch.rest.RestClientFactory;
 
+import org.elasticsearch.painless.PainlessPlugin;
+
 import io.searchbox.client.JestClient;
 
 public class AlarmToESIT {
@@ -73,6 +75,7 @@ public class AlarmToESIT {
             .withSetting("http.type", "netty4")
             .withSetting("transport.type", "netty4")
             .withSetting("transport.tcp.port", HTTP_TRANSPORT_PORT)
+            .withPlugins(PainlessPlugin.class)
     );
 
     @Before
@@ -119,7 +122,7 @@ public class AlarmToESIT {
 
         // Verify the set of alarms at various points in time
 
-        // t=0, no scenarioResults
+        // t=0, no alarms
         assertThat(scenarioResults.getAlarms(0), hasSize(0));
 
         assertThat(alarmTableView.getAlarmsAtTime(0), hasSize(0));
@@ -228,6 +231,84 @@ public class AlarmToESIT {
         // t=∞
         Long lastKnownTime = scenarioResults.getLastKnownTime();
         assertThat(scenarioResults.getAlarms(lastKnownTime), hasSize(0));
+        assertThat(alarmTableView.getAlarmsAtTime(lastKnownTime), hasSize(0));
+    }
+
+    @Test
+    public void canMaintainMultipleStateChanges() throws IOException {
+        Scenario scenario = Scenario.builder()
+                .withLegacyAlarmBehavior()
+                .withNodeDownEvent(1, 1)
+                .withAcknowledgmentForNodeDownAlarm(2, 1)
+                .withUnAcknowledgmentForNodeDownAlarm(3, 1)
+                .withAcknowledgmentForNodeDownAlarm(4, 1)
+                .withUnAcknowledgmentForNodeDownAlarm(5, 1)
+                .awaitUntil(waitForNAlarmsInES(1))
+                .build();
+        // Execute the scenario
+        ScenarioResults scenarioResults = scenario.play();
+
+        // Retrieve the alarms as stored in ES
+        final List<AlarmDocumentDTO> alarmDocuments = alarmsFromES.getAllAlarms();
+        assertThat(alarmDocuments, hasSize(equalTo(1)));
+        final AlarmTableView alarmTableView = new AlarmTableView(alarmDocuments);
+
+        // Verify the set of alarms at various points in time
+
+        // t=0, no alarms
+        assertThat(scenarioResults.getAlarms(0), hasSize(0));
+
+        assertThat(alarmTableView.getAlarmsAtTime(0), hasSize(0));
+
+        // t=1, a single problem alarm that is not yet acknowledged
+        assertThat(scenarioResults.getAlarms(1), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(1), hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(scenarioResults.getProblemAlarm(1), not(acknowledged()));
+
+        assertThat(alarmTableView.getAlarmsAtTime(1), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(1), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(alarmTableView.getProblemAlarmAtTime(1), not(ExtAlarmsMatchers.acknowledged()));
+
+        // t=2, a single problem alarm that is acknowledged
+        assertThat(scenarioResults.getAlarms(2), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(2), hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(scenarioResults.getProblemAlarm(2), acknowledged());
+
+        assertThat(alarmTableView.getAlarmsAtTime(2), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(2), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(alarmTableView.getProblemAlarmAtTime(2), ExtAlarmsMatchers.acknowledged());
+
+        // t=3, a single problem alarm that is no longer acknowledged
+        assertThat(scenarioResults.getAlarms(3), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(3), hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(scenarioResults.getProblemAlarm(3), not(acknowledged()));
+
+        assertThat(alarmTableView.getAlarmsAtTime(3), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(3), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(alarmTableView.getProblemAlarmAtTime(3), not(ExtAlarmsMatchers.acknowledged()));
+
+        // t=4, a single problem alarm that is acknowledged
+        assertThat(scenarioResults.getAlarms(4), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(4), hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(scenarioResults.getProblemAlarm(4), acknowledged());
+
+        assertThat(alarmTableView.getAlarmsAtTime(4), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(4), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(alarmTableView.getProblemAlarmAtTime(4), ExtAlarmsMatchers.acknowledged());
+
+        // t=5, a single problem alarm that is no longer acknowledged
+        assertThat(scenarioResults.getAlarms(5), hasSize(1));
+        assertThat(scenarioResults.getProblemAlarm(5), hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(scenarioResults.getProblemAlarm(5), not(acknowledged()));
+
+        assertThat(alarmTableView.getAlarmsAtTime(5), hasSize(1));
+        assertThat(alarmTableView.getProblemAlarmAtTime(5), ExtAlarmsMatchers.hasSeverity(OnmsSeverity.MAJOR));
+        assertThat(alarmTableView.getProblemAlarmAtTime(5), not(ExtAlarmsMatchers.acknowledged()));
+
+        // t=∞
+        Long lastKnownTime = scenarioResults.getLastKnownTime();
+        assertThat(scenarioResults.getAlarms(lastKnownTime), hasSize(0));
+
         assertThat(alarmTableView.getAlarmsAtTime(lastKnownTime), hasSize(0));
     }
 

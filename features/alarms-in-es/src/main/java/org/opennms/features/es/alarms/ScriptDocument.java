@@ -26,27 +26,44 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.alarmd.drools;
+package org.opennms.features.es.alarms;
 
-import java.util.Date;
+import com.google.gson.annotations.SerializedName;
 
-import org.opennms.netmgt.model.OnmsAlarm;
-import org.opennms.netmgt.model.OnmsSeverity;
+public class ScriptDocument {
 
-public interface AlarmService {
+    protected final static String PAINLESS_LANG = "painless";
 
-    void clearAlarm(OnmsAlarm alarm, Date clearTime);
+    @SerializedName("source")
+    private String source;
 
-    void deleteAlarm(OnmsAlarm alarm);
+    @SerializedName("lang")
+    private String lang = PAINLESS_LANG;
 
-    void unclearAlarm(OnmsAlarm alarm, Date now);
+    @SerializedName("params")
+    private Object parameters;
 
-    void escalateAlarm(OnmsAlarm alarm, Date now);
+    public String getSource() {
+        return source;
+    }
 
-    void acknowledgeAlarm(OnmsAlarm alarm, Date now);
+    public void setSource(String source) {
+        this.source = source;
+    }
 
-    void unacknowledgeAlarm(OnmsAlarm alarm, Date now);
+    public String getLang() {
+        return lang;
+    }
 
-    void setSeverity(OnmsAlarm alarm, OnmsSeverity severity, Date now);
+    public void setLang(String lang) {
+        this.lang = lang;
+    }
 
+    public Object getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(Object parameters) {
+        this.parameters = parameters;
+    }
 }
