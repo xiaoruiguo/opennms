@@ -71,7 +71,7 @@ public class AlarmTableView {
 
     private AlarmDocumentDTO getFirstAlarmWithType(long time, int type, String typeDescr) {
         return getAlarmsAtTime(time).stream()
-                .filter(a -> a.getAlarmType() == type)
+                .filter(a -> a.getType() == type)
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("No " + typeDescr + " alarms at time: " + time));
     }

@@ -58,12 +58,6 @@ public class RelatedAlarmDocumentDTO {
     @SerializedName("severity-label")
     private String severityLabel;
 
-    @SerializedName("ack-time")
-    private Long ackTime;
-
-    @SerializedName("ack-user")
-    private String ackUser;
-
     @SerializedName("managed-object-instance")
     private String managedObjectInstance;
 
@@ -124,22 +118,6 @@ public class RelatedAlarmDocumentDTO {
 
     public void setSeverityLabel(String severityLabel) {
         this.severityLabel = severityLabel;
-    }
-
-    public Long getAckTime() {
-        return ackTime;
-    }
-
-    public void setAckTime(Long ackTime) {
-        this.ackTime = ackTime;
-    }
-
-    public String getAckUser() {
-        return ackUser;
-    }
-
-    public void setAckUser(String ackUser) {
-        this.ackUser = ackUser;
     }
 
     public String getManagedObjectInstance() {

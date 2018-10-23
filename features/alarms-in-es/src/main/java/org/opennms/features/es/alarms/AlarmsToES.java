@@ -33,6 +33,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,6 +50,7 @@ import org.opennms.core.time.PseudoClock;
 import org.opennms.features.es.alarms.dto.AckStateChangeDTO;
 import org.opennms.features.es.alarms.dto.AlarmDocumentDTO;
 import org.opennms.features.es.alarms.dto.EventDocumentDTO;
+import org.opennms.features.es.alarms.dto.MemoDocumentDTO;
 import org.opennms.features.es.alarms.dto.MemoStateChangeDTO;
 import org.opennms.features.es.alarms.dto.MemoType;
 import org.opennms.features.es.alarms.dto.NodeDocumentDTO;
@@ -198,13 +200,21 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
 
     private AlarmDocumentDTO toDocument(OnmsAlarm alarm) {
         final AlarmDocumentDTO document = toMinimalDocument(alarm);
-        document.setAlarmType(alarm.getAlarmType());
+        document.setType(alarm.getAlarmType());
+        document.setLogMessage(alarm.getLogMsg());
+        document.setDescription(alarm.getDescription());
+        document.setOperatorInstructions(alarm.getOperInstruct());
         document.setSeverityId(alarm.getSeverityId());
         document.setSeverityLabel(alarm.getSeverityLabel());
         document.setArchived(alarm.isArchived());
         document.setNode(toNode(alarm.getNode()));
         document.setManagedObjectType(alarm.getManagedObjectType());
         document.setManagedObjectInstance(alarm.getManagedObjectInstance());
+
+        // Memos
+        document.setStickyMemo(toMemo(alarm.getStickyMemo()));
+        document.setJournalMemo(toMemo(alarm.getReductionKeyMemo()));
+
         // TODO: Set more fields
 
         // Ack
@@ -215,11 +225,28 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
 
         // Related alarms
         document.setSituation(alarm.isSituation());
+        List<Integer> relatedAlarmIds = new LinkedList<>();
+        List<String> relatedAlarmReductionKeys = new LinkedList<>();
         for (OnmsAlarm relatedAlarm : alarm.getRelatedAlarms()) {
+            relatedAlarmIds.add(relatedAlarm.getId());
+            relatedAlarmReductionKeys.add(relatedAlarm.getReductionKey());
             document.addRelatedAlarm(toRelatedAlarm(relatedAlarm));
         }
+        document.setRelatedAlarmIds(relatedAlarmIds);
+        document.setRelatedAlarmReductionKeys(relatedAlarmReductionKeys);
 
         return document;
+    }
+
+    private MemoDocumentDTO toMemo(OnmsMemo memo) {
+        if (memo == null) {
+            return null;
+        }
+        final MemoDocumentDTO doc = new MemoDocumentDTO();
+        doc.setAuthor(memo.getAuthor());
+        doc.setBody(memo.getBody());
+        doc.setUpdateTime(memo.getUpdated() != null ? memo.getUpdated().getTime() : null);
+        return doc;
     }
 
     private NodeDocumentDTO toNode(OnmsNode node) {
@@ -247,10 +274,6 @@ public class AlarmsToES implements AlarmEntityListener, Runnable  {
         doc.setLastEvent(toEvent(alarm.getLastEvent()));
         doc.setSeverityId(alarm.getSeverityId());
         doc.setSeverityLabel(alarm.getSeverityLabel());
-        doc.setAckUser(alarm.getAckUser());
-        if (alarm.getAckTime() != null) {
-            doc.setAckTime(alarm.getAckTime().getTime());
-        }
         doc.setManagedObjectInstance(alarm.getManagedObjectInstance());
         doc.setManagedObjectType(alarm.getManagedObjectType());
         return doc;

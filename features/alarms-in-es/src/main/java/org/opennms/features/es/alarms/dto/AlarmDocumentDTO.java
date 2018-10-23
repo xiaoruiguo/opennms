@@ -73,8 +73,8 @@ public class AlarmDocumentDTO {
     @SerializedName("service-name")
     private String serviceName;
 
-    @SerializedName("alarm-type")
-    private Integer alarmType;
+    @SerializedName("type")
+    private Integer type;
 
     @SerializedName("counter")
     private Integer counter;
@@ -159,6 +159,12 @@ public class AlarmDocumentDTO {
 
     @SerializedName("journal-memo")
     private MemoDocumentDTO journalMemo;
+
+    @SerializedName("related-alarm-ids")
+    private List<Integer> relatedAlarmIds;
+
+    @SerializedName("related-alarm-reduction-keys")
+    private List<String> relatedAlarmReductionKeys;
 
     @SerializedName("related-alarms")
     private List<RelatedAlarmDocumentDTO> relatedAlarms;
@@ -315,12 +321,12 @@ public class AlarmDocumentDTO {
         this.serviceName = serviceName;
     }
 
-    public Integer getAlarmType() {
-        return alarmType;
+    public Integer getType() {
+        return type;
     }
 
-    public void setAlarmType(Integer alarmType) {
-        this.alarmType = alarmType;
+    public void setType(Integer type) {
+        this.type = type;
     }
 
     public Integer getCounter() {
@@ -609,5 +615,21 @@ public class AlarmDocumentDTO {
 
     public void setMemoStateChanges(List<MemoStateChangeDTO> memoStateChanges) {
         this.memoStateChanges = memoStateChanges;
+    }
+
+    public List<Integer> getRelatedAlarmIds() {
+        return relatedAlarmIds;
+    }
+
+    public void setRelatedAlarmIds(List<Integer> relatedAlarmIds) {
+        this.relatedAlarmIds = relatedAlarmIds;
+    }
+
+    public List<String> getRelatedAlarmReductionKeys() {
+        return relatedAlarmReductionKeys;
+    }
+
+    public void setRelatedAlarmReductionKeys(List<String> relatedAlarmReductionKeys) {
+        this.relatedAlarmReductionKeys = relatedAlarmReductionKeys;
     }
 }
