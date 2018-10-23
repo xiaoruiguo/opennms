@@ -85,8 +85,11 @@ public class AlarmToESIT {
         RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT);
         jestClient = restClientFactory.createClient();
         alarmsFromES = new AlarmsFromES(jestClient);
-        // Initially there should be no documents
-        assertThat(alarmsFromES.getAllAlarms(), hasSize(equalTo(0)));
+
+        // Wait until ES is up and running - initially there should be no documents
+        await().atMost(1, TimeUnit.MINUTES).pollInterval(5, TimeUnit.SECONDS)
+                .ignoreExceptions()
+                .until(alarmsFromES::getAllAlarms, hasSize(equalTo(0)));
     }
 
     @After
